@@ -152,6 +152,20 @@ class AcceptanceTest {
     }
 
     @Test
+    void nextEstimateReadsTheReplacedRateFile() throws IOException {
+        Path file = Files.createTempFile("prices", ".json");
+        Files.copy(Path.of("src/main/resources/prices.json"), file, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        CatalogRepository repo = new CatalogRepository(file.toString());
+        assertEquals(1100, repo.current().work("screed").rate().standard());
+        ObjectNode root = (ObjectNode) Jsons.MAPPER.readTree(Files.readString(file));
+        ((ObjectNode) root.path("works").path("screed").path("prices")).put("standard", 1101);
+        Files.writeString(file, Jsons.MAPPER.writeValueAsString(root));
+        assertEquals(1101, repo.current().work("screed").rate().standard());
+        Files.writeString(file, "{");
+        assertEquals(1101, repo.current().work("screed").rate().standard());
+    }
+
+    @Test
     void clientOverrideChangesOnlyThatRate() throws IOException {
         Path file = Files.createTempFile("prices", ".json");
         ObjectNode root = (ObjectNode) Jsons.MAPPER.readTree(Files.readString(Path.of("src/main/resources/prices.json")));

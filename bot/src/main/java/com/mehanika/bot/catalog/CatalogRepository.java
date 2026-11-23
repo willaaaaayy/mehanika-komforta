@@ -18,7 +18,6 @@ public class CatalogRepository {
     private final Path file;
     private final Object lock = new Object();
     private PriceCatalog cached;
-    private long mtime = Long.MIN_VALUE;
 
     @Autowired
     public CatalogRepository(BotSettings settings) {
@@ -33,7 +32,6 @@ public class CatalogRepository {
             String path = location.startsWith("file:") ? location.substring("file:".length()) : location;
             this.file = Path.of(path);
             this.cached = read(this.file);
-            this.mtime = mtimeOf(this.file);
         }
     }
 
@@ -41,20 +39,10 @@ public class CatalogRepository {
         if (file == null) {
             return cached;
         }
-        long observed = mtimeOf(file);
-        if (observed == mtime && cached != null) {
-            return cached;
-        }
         synchronized (lock) {
-            observed = mtimeOf(file);
-            if (observed == mtime && cached != null) {
-                return cached;
-            }
             try {
-                PriceCatalog loaded = read(file);
-                cached = loaded;
-                mtime = observed;
-                return loaded;
+                cached = read(file);
+                return cached;
             } catch (RuntimeException ex) {
                 if (cached == null) {
                     throw ex;
@@ -89,11 +77,4 @@ public class CatalogRepository {
         }
     }
 
-    private static long mtimeOf(Path path) {
-        try {
-            return Files.getLastModifiedTime(path).toMillis();
-        } catch (IOException ex) {
-            return Long.MIN_VALUE;
-        }
-    }
 }
