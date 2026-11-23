@@ -10,6 +10,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 @Entity
@@ -57,6 +58,18 @@ public class LeadEntity {
 
     @Column(name = "telegram_bio", length = 70)
     private String telegramBio;
+
+    @Column(name = "floor_area", precision = 12, scale = 2)
+    private BigDecimal floorArea;
+
+    @Column(length = 16)
+    private String grade;
+
+    @Column(name = "condition_code", length = 8)
+    private String conditionCode;
+
+    @Column(name = "package_code", length = 16)
+    private String packageCode;
 
     protected LeadEntity() {
     }
@@ -130,5 +143,42 @@ public class LeadEntity {
 
     public String getTelegramBio() {
         return telegramBio;
+    }
+
+    public BigDecimal getFloorArea() {
+        return floorArea;
+    }
+
+    public String getGrade() {
+        return grade;
+    }
+
+    public String getConditionCode() {
+        return conditionCode;
+    }
+
+    public String getPackageCode() {
+        return packageCode;
+    }
+
+    public void edit(
+            String name,
+            String phone,
+            String objectType,
+            LeadStage stage,
+            BigDecimal floorArea,
+            String grade,
+            String conditionCode,
+            String packageCode
+    ) {
+        this.name = name;
+        this.phone = phone;
+        this.objectType = objectType;
+        this.stage = stage;
+        this.floorArea = floorArea;
+        this.grade = grade;
+        this.conditionCode = conditionCode;
+        this.packageCode = packageCode;
+        this.updatedAt = Instant.now();
     }
 }

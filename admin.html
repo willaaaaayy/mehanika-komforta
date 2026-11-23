@@ -85,33 +85,55 @@
           <tbody id="rows"></tbody>
         </table>
       </div>
+      <section class="card" id="prices-box">
+        <h2>Расценки</h2>
+        <p id="prices-note"></p>
+        <input id="prices-file" type="file" accept="application/json">
+        <button type="button" id="prices-save">Загрузить прайс</button>
+      </section>
       <article class="card" id="card" hidden>
         <header class="card-head">
           <h2 id="card-name"></h2>
           <p id="card-stage"></p>
         </header>
-        <div id="card-account" hidden>
-          <img id="card-profile" alt="" hidden>
-          <p id="card-account-name"></p>
-          <p id="card-username"></p>
-          <p id="card-bio"></p>
-        </div>
-        <div class="card-body">
-          <dl>
-            <dt>Телефон</dt>
-            <dd id="card-phone"></dd>
-            <dt>Тип объекта</dt>
-            <dd id="card-object"></dd>
-            <dt>Источник</dt>
-            <dd id="card-source"></dd>
-          </dl>
-          <aside>
-            <p id="card-date"></p>
-            <label>Этап
-              <select id="card-stage-select"></select>
-            </label>
-          </aside>
-        </div>
+        <form id="card-form">
+          <label>Имя <input id="card-name-input" required></label>
+          <label>Телефон <input id="card-phone-input" required></label>
+          <label>Тип объекта <input id="card-object-input" required></label>
+          <p id="card-source"></p>
+          <p id="card-date"></p>
+          <label>Этап <select id="card-stage-select"></select></label>
+          <label>Площадь, м² <input id="card-area" inputmode="decimal"></label>
+          <label>Класс
+            <select id="card-grade">
+              <option value="">Не выбран</option>
+              <option value="economy">Эконом</option>
+              <option value="standard">Стандарт</option>
+              <option value="premium">Премиум</option>
+            </select>
+          </label>
+          <label>Состояние
+            <select id="card-condition">
+              <option value="new">Новостройка</option>
+              <option value="old">Вторичка</option>
+            </select>
+          </label>
+          <label>Состав
+            <select id="card-package">
+              <option value="paint">Под покраску</option>
+              <option value="turnkey">Под ключ без санузлов</option>
+            </select>
+          </label>
+          <div id="card-account" hidden>
+            <img id="card-profile" alt="" hidden>
+            <label>Имя в Telegram <input id="card-first"></label>
+            <label>Фамилия <input id="card-last"></label>
+            <label>Имя пользователя <input id="card-username"></label>
+            <label>Описание <textarea id="card-bio"></textarea></label>
+          </div>
+          <p id="card-estimate"></p>
+          <button type="submit">Сохранить</button>
+        </form>
         <div id="card-photos"></div>
         <button type="button" id="card-close">К списку</button>
       </article>
@@ -177,6 +199,7 @@
         logout.hidden = false;
         document.title = "Заявки — Механика Комфорта";
         load();
+        loadPrices();
       }
 
       var all = [];
@@ -248,21 +271,26 @@
         card.hidden = false;
         document.getElementById("card-name").textContent = lead.name;
         document.getElementById("card-stage").textContent = stageName(lead.stage);
-        document.getElementById("card-phone").textContent = lead.phone;
-        document.getElementById("card-object").textContent = lead.objectType;
+        document.getElementById("card-name-input").value = lead.name;
+        document.getElementById("card-phone-input").value = lead.phone;
+        document.getElementById("card-object-input").value = lead.objectType;
         document.getElementById("card-source").textContent = sources[lead.source] || lead.source;
         document.getElementById("card-date").textContent = when(lead.createdAt);
         cardStage.value = lead.stage;
+        document.getElementById("card-area").value = lead.floorArea == null ? "" : lead.floorArea;
+        document.getElementById("card-grade").value = lead.grade || "";
+        document.getElementById("card-condition").value = lead.condition || "new";
+        document.getElementById("card-package").value = lead.packageCode || "paint";
         var account = document.getElementById("card-account");
         var profile = document.getElementById("card-profile");
         profile.hidden = true;
         profile.removeAttribute("src");
         if (lead.telegram) {
           account.hidden = false;
-          var accountName = (lead.telegram.firstName + " " + lead.telegram.lastName).trim();
-          document.getElementById("card-account-name").textContent = accountName;
-          document.getElementById("card-username").textContent = lead.telegram.username ? "@" + lead.telegram.username : "";
-          document.getElementById("card-bio").textContent = lead.telegram.bio || "";
+          document.getElementById("card-first").value = lead.telegram.firstName || "";
+          document.getElementById("card-last").value = lead.telegram.lastName || "";
+          document.getElementById("card-username").value = lead.telegram.username || "";
+          document.getElementById("card-bio").value = lead.telegram.bio || "";
           if (lead.telegram.photo) {
             profile.hidden = false;
             profile.src = "/api/leads/" + id + "/telegram-photo";
@@ -272,6 +300,18 @@
         }
         var photos = document.getElementById("card-photos");
         photos.replaceChildren();
+        document.getElementById("card-estimate").textContent = "";
+        api("/api/leads/" + id).then(function (response) {
+          if (response.status !== 200) return null;
+          return response.json();
+        }).then(function (detail) {
+          if (!detail || !detail.estimate) return;
+          var estimate = detail.estimate;
+          var text = estimate.low + "–" + estimate.high + " ₽, середина " + estimate.middle + " ₽. Работа " + estimate.labor + " ₽, материал " + estimate.material + " ₽. Гарантия " + estimate.warrantyYears + " года. Цена в договоре фиксируется.";
+          if (estimate.teaching) text = "Учебный прайс. " + text;
+          if (estimate.belowMin) text += " Ниже минимального заказа, менеджер подтверждает выезд.";
+          document.getElementById("card-estimate").textContent = text;
+        });
         api("/api/leads/" + id + "/photos").then(function (response) {
           if (response.status !== 200) return null;
           return response.json();
@@ -318,6 +358,18 @@
         }).format(date);
       }
 
+      function loadPrices() {
+        api("/api/prices").then(function (response) {
+          if (response.status !== 200) return null;
+          return response.json();
+        }).then(function (prices) {
+          if (!prices) return;
+          document.getElementById("prices-note").textContent = prices.teaching
+            ? prices.note
+            : "Прайс компании. Бот считает по нему.";
+        });
+      }
+
       api("/api/session").then(function (response) {
         if (response.status === 204) showList();
         else showDoor();
@@ -355,12 +407,41 @@
         document.getElementById("card").hidden = true;
       });
 
-      cardStage.addEventListener("change", function () {
+      document.getElementById("card-form").addEventListener("submit", function (event) {
+        event.preventDefault();
         if (!openId) return;
-        api("/api/leads/" + openId, {
-          method: "PATCH",
-          body: JSON.stringify({ stage: cardStage.value })
-        }).then(function () { load(); });
+        var area = document.getElementById("card-area").value.trim();
+        var body = {
+          name: document.getElementById("card-name-input").value,
+          phone: document.getElementById("card-phone-input").value,
+          objectType: document.getElementById("card-object-input").value,
+          stage: cardStage.value,
+          floorArea: area === "" ? null : Number(area.replace(",", ".")),
+          grade: document.getElementById("card-grade").value || null,
+          condition: document.getElementById("card-condition").value,
+          packageCode: document.getElementById("card-package").value
+        };
+        if (!document.getElementById("card-account").hidden) {
+          body.telegram = {
+            username: document.getElementById("card-username").value,
+            firstName: document.getElementById("card-first").value,
+            lastName: document.getElementById("card-last").value,
+            bio: document.getElementById("card-bio").value
+          };
+        }
+        api("/api/leads/" + openId, { method: "PATCH", body: JSON.stringify(body) }).then(function () { load(); });
+      });
+
+      document.getElementById("prices-save").addEventListener("click", function () {
+        var file = document.getElementById("prices-file").files[0];
+        if (!file) return;
+        file.text().then(function (text) {
+          return api("/api/prices", { method: "PUT", body: text });
+        }).then(function (response) {
+          document.getElementById("prices-note").textContent = response.status === 200
+            ? "Прайс записан. Бот прочитает его при следующем расчёте."
+            : "Файл не подошёл. Нужен тот же формат, что у текущего прайса.";
+        });
       });
 
       document.getElementById("manual").addEventListener("submit", function (event) {

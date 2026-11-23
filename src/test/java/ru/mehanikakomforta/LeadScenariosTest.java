@@ -18,6 +18,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -112,7 +113,7 @@ class LeadScenariosTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"stage\":\"warranty\"}"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.stage").value("warranty"));
+                .andExpect(jsonPath("$.lead.stage").value("warranty"));
     }
 
     @Test
@@ -310,6 +311,38 @@ class LeadScenariosTest {
         mvc.perform(get("/api/leads/" + leadId + "/telegram-photo").session(session(login)))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType("image/jpeg"));
+    }
+
+    @Test
+    void ownerEditsAreaAndSeesTheBotPriceFork() throws Exception {
+        MockMvc mvc = mvc();
+        MvcResult created = mvc.perform(post("/api/leads")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Расчёт","phone":"79001112299","objectType":"Офис","source":"site"}
+                                """))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String id = created.getResponse().getContentAsString().replaceFirst(".*?\"id\":(\\d+).*", "$1");
+        MvcResult login = mvc.perform(post("/api/session")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"password\":\"test-admin-secret\"}"))
+                .andExpect(status().isNoContent())
+                .andReturn();
+        mvc.perform(patch("/api/leads/" + id)
+                        .session(session(login))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"floorArea":40,"grade":"economy","condition":"new","packageCode":"paint"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.teaching").value(true))
+                .andExpect(jsonPath("$.estimate.low").isNumber())
+                .andExpect(jsonPath("$.estimate.high").isNumber());
+        mvc.perform(put("/api/prices").with(csrf()).content("{}"))
+                .andExpect(status().isUnauthorized());
     }
 
     private static MockHttpSession session(MvcResult result) {

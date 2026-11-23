@@ -1,5 +1,6 @@
 package ru.mehanikakomforta.leads;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 public record LeadResponse(
@@ -10,6 +11,10 @@ public record LeadResponse(
         String objectType,
         String source,
         String stage,
+        BigDecimal floorArea,
+        String grade,
+        String condition,
+        String packageCode,
         TelegramView telegram
 ) {
     public record TelegramView(
@@ -43,6 +48,10 @@ public record LeadResponse(
                 lead.getObjectType(),
                 lead.getSource().name(),
                 lead.getStage().code(),
+                lead.getFloorArea(),
+                lead.getGrade(),
+                lead.getConditionCode(),
+                lead.getPackageCode(),
                 telegram
         );
     }
