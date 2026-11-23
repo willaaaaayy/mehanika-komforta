@@ -1,0 +1,262 @@
+{
+  "schemaVersion": 1,
+  "teaching": true,
+  "note": "Учебный прайс. Цифры — заглушка, их заменяют ценами компании. clientOverrides: ключ — id клиента в CRM. У works и points можно частично заменить prices и laborShare.",
+  "validDays": 14,
+  "minOrder": 15000,
+  "defaultHeight": 2.7,
+  "wallFactor": 2.5,
+  "chaseLabor": 1.25,
+  "highCeiling": 1.15,
+  "highHeightM": 3.2,
+  "baseExcludes": [
+    "демонтаж и вывоз мусора",
+    "доставка за пределы города",
+    "мебель, техника и проектная документация"
+  ],
+  "grades": {
+    "economy": "Эконом",
+    "standard": "Стандарт",
+    "premium": "Премиум"
+  },
+  "objects": {
+    "flat": "Квартира",
+    "house": "Дом",
+    "office": "Офис",
+    "plant": "Производство"
+  },
+  "conditions": {
+    "new": "Новостройка",
+    "old": "Вторичка"
+  },
+  "works": {
+    "screed": {
+      "title": "Стяжка пола",
+      "unit": "м²",
+      "area": "floor",
+      "prices": {
+        "economy": 800,
+        "standard": 1100,
+        "premium": 1600
+      },
+      "laborShare": 0.55,
+      "excludes": "выравнивание при перепаде больше 50 мм"
+    },
+    "plaster": {
+      "title": "Штукатурка стен по маякам",
+      "unit": "м²",
+      "area": "walls",
+      "prices": {
+        "economy": 700,
+        "standard": 950,
+        "premium": 1400
+      },
+      "laborShare": 0.65,
+      "excludes": "снятие старой штукатурки"
+    },
+    "putty": {
+      "title": "Шпаклёвка стен под покраску",
+      "unit": "м²",
+      "area": "walls",
+      "prices": {
+        "economy": 500,
+        "standard": 750,
+        "premium": 1100
+      },
+      "laborShare": 0.6,
+      "excludes": "декоративная штукатурка"
+    },
+    "paint_walls": {
+      "title": "Покраска стен",
+      "unit": "м²",
+      "area": "walls",
+      "prices": {
+        "economy": 350,
+        "standard": 550,
+        "premium": 900
+      },
+      "laborShare": 0.5,
+      "excludes": "сложные колеры и декоративные эффекты"
+    },
+    "paint_ceiling": {
+      "title": "Покраска потолка",
+      "unit": "м²",
+      "area": "ceiling",
+      "prices": {
+        "economy": 400,
+        "standard": 600,
+        "premium": 950
+      },
+      "laborShare": 0.55,
+      "excludes": "многоуровневый потолок"
+    },
+    "drywall": {
+      "title": "Перегородки и обшивка ГКЛ",
+      "unit": "м²",
+      "area": "walls",
+      "prices": {
+        "economy": 900,
+        "standard": 1300,
+        "premium": 1900
+      },
+      "laborShare": 0.55,
+      "excludes": "сложные ниши и закладные под мебель"
+    },
+    "tile_floor": {
+      "title": "Плитка на пол",
+      "unit": "м²",
+      "area": "floor",
+      "prices": {
+        "economy": 1800,
+        "standard": 2800,
+        "premium": 4500
+      },
+      "laborShare": 0.4,
+      "excludes": "раскладка с большим числом подрезок и тёплый пол"
+    },
+    "tile_walls": {
+      "title": "Плитка на стены",
+      "unit": "м²",
+      "area": "walls",
+      "prices": {
+        "economy": 2000,
+        "standard": 3200,
+        "premium": 5200
+      },
+      "laborShare": 0.4,
+      "excludes": "мозаика и резка керамогранита 60×60 и больше"
+    },
+    "laminate": {
+      "title": "Ламинат",
+      "unit": "м²",
+      "area": "floor",
+      "prices": {
+        "economy": 900,
+        "standard": 1400,
+        "premium": 2200
+      },
+      "laborShare": 0.35,
+      "excludes": "подложка сверх стандарта пакета и пороги сложной формы"
+    },
+    "wallpaper": {
+      "title": "Обои",
+      "unit": "м²",
+      "area": "walls",
+      "prices": {
+        "economy": 500,
+        "standard": 800,
+        "premium": 1400
+      },
+      "laborShare": 0.45,
+      "excludes": "фотообои и тканевые полотна"
+    },
+    "stretch": {
+      "title": "Натяжной потолок",
+      "unit": "м²",
+      "area": "ceiling",
+      "prices": {
+        "economy": 700,
+        "standard": 1100,
+        "premium": 1800
+      },
+      "laborShare": 0.4,
+      "excludes": "световые линии и много уровней"
+    }
+  },
+  "packages": {
+    "paint": {
+      "title": "Под покраску",
+      "works": [
+        "screed",
+        "plaster",
+        "putty",
+        "paint_walls",
+        "paint_ceiling"
+      ],
+      "note": "Пол, стены и потолок. Санузлы, двери и инженерия не входят."
+    },
+    "turnkey": {
+      "title": "Под ключ без санузлов",
+      "works": [
+        "screed",
+        "plaster",
+        "putty",
+        "paint_walls",
+        "paint_ceiling",
+        "laminate"
+      ],
+      "note": "Жилые комнаты: стяжка, стены под покраску, потолок, ламинат. Плитка, двери и мебель не входят."
+    }
+  },
+  "points": {
+    "electro": {
+      "title": "Электроточка",
+      "unit": "точка",
+      "prices": {
+        "economy": 1800,
+        "standard": 2500,
+        "premium": 4200
+      },
+      "laborShare": 0.6,
+      "note": "Розетка, выключатель или вывод света. Кабель внутри точки усреднён. Щит, ввод и учёт не входят."
+    },
+    "water": {
+      "title": "Сантехническая точка",
+      "unit": "точка",
+      "prices": {
+        "economy": 5000,
+        "standard": 7500,
+        "premium": 12000
+      },
+      "laborShare": 0.55,
+      "note": "Вывод воды или канализации. Ввод в дом, коллектор, котельная и сжатый воздух не входят."
+    },
+    "cameras": {
+      "title": "Камера видеонаблюдения",
+      "unit": "шт",
+      "prices": {
+        "economy": 9000,
+        "standard": 15000,
+        "premium": 28000
+      },
+      "laborShare": 0.35,
+      "note": "Типовая камера с монтажом в готовом помещении. Регистратор на большой объект, опоры и столбы не входят."
+    },
+    "lan": {
+      "title": "Точка интернета или СКС",
+      "unit": "точка",
+      "prices": {
+        "economy": 2500,
+        "standard": 4000,
+        "premium": 7500
+      },
+      "laborShare": 0.5,
+      "note": "Одна розетка или точка доступа в помещении. Серверная, оптика и стойки не входят."
+    }
+  },
+  "complex": {
+    "panel": "Сборка щита",
+    "power": "Промышленная электрика",
+    "air": "Сжатый воздух",
+    "acs": "СКУД",
+    "audio": "Аудиосистема",
+    "cctv": "Видеонаблюдение нестандарт"
+  },
+  "complexNeeds": {
+    "panel": "для щита: мощность, ввод и однолинейная схема, если она уже есть",
+    "power": "для промышленной электрики: план, нагрузки и трассы",
+    "air": "для воздуха: давление, расход и примерная длина магистрали",
+    "acs": "для СКУД: число дверей, тип считывателя и нужна ли интеграция с видеонаблюдением",
+    "audio": "для аудио: назначение зала и число зон",
+    "cctv": "для сложного видеонаблюдения: улица или цех, архив и число камер"
+  },
+  "spread": {
+    "finish|new": 0.15,
+    "finish|old": 0.25,
+    "eng|new": 0.25,
+    "eng|old": 0.4,
+    "both|new": 0.25,
+    "both|old": 0.35
+  },
+  "clientOverrides": {}
+}

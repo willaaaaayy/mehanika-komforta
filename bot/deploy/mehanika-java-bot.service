@@ -1,0 +1,18 @@
+[Unit]
+Description=Mehanika Komforta Telegram bot
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=mehanika
+Group=mehanika
+WorkingDirectory=/opt/mehanika-bot
+EnvironmentFile=/opt/mehanika-bot/.env
+ExecStart=/opt/jdk-25/bin/java -Xms64m -Xmx256m -jar /opt/mehanika-bot/mehanika-bot.jar
+Restart=always
+RestartSec=5
+TimeoutStopSec=40
+
+[Install]
+WantedBy=multi-user.target
