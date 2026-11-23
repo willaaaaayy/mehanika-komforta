@@ -72,11 +72,29 @@ a {
 }
 
 .logo {
-  font-size: 1.05rem;
-  font-weight: 600;
-  letter-spacing: -0.02em;
-  line-height: 1.25;
+  display: block;
+  line-height: 0;
   text-decoration: none;
+}
+
+.logo img,
+.hero-mark {
+  display: block;
+  width: auto;
+  height: auto;
+  max-width: 100%;
+  background: transparent;
+  box-shadow: none;
+  filter: none;
+}
+
+.logo img {
+  width: 7.25rem;
+}
+
+.hero-mark {
+  width: min(18rem, 70%);
+  margin: 0 0 1.75rem;
 }
 
 .rail nav {
@@ -528,6 +546,15 @@ th {
   .logout {
     margin-top: 0;
   }
+}
+
+select {
+  font: inherit;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  min-height: 2.2rem;
 }
 
 @media (forced-colors: active) {

@@ -1,0 +1,18 @@
+[Unit]
+Description=Mehanika Komforta CRM
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=crm
+Group=crm
+WorkingDirectory=/opt/mehanika-crm
+EnvironmentFile=/etc/mehanika-crm.env
+ExecStart=/usr/local/jdk-25/bin/java -jar /opt/mehanika-crm/app.jar
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

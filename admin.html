@@ -4,108 +4,76 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f6f3ee">
-  <title>Вход администратора — Механика Комфорта</title>
-  <meta name="description" content="Учебный вход администратора Механики Комфорта и набросок CRM.">
+  <title>Вход — Механика Комфорта</title>
+  <link rel="icon" href="logo.jpg" type="image/jpeg">
+  <meta name="description" content="Вход владельца Механики Комфорта к списку заявок.">
   <link rel="stylesheet" href="site.css">
 </head>
 <body>
   <a class="skip" href="#main">К содержанию</a>
   <header class="rail">
-    <a class="logo" href="index.html">Механика Комфорта</a>
-    <nav aria-label="Разделы" id="site-nav">
+    <a class="logo" href="index.html"><img src="logo.jpg" alt="Механика Комфорта"></a>
+    <nav aria-label="Разделы">
       <a href="index.html#work">Работы</a>
       <a href="index.html#cases">Объекты</a>
       <a href="index.html#why">Подход</a>
       <a href="index.html#request">Заявка</a>
     </nav>
-    <nav aria-label="CRM" id="crm-nav" hidden>
-      <a href="#leads">Заявки</a>
-      <a href="#objects">Объекты</a>
-    </nav>
-    <a class="login" id="login-link" href="admin.html" aria-current="page">Вход</a>
+    <a class="login" id="enter" href="#door">Вход</a>
     <button class="login logout" id="logout" type="button" hidden>Выйти</button>
   </header>
   <main class="page" id="main">
     <section class="door" id="door" aria-labelledby="admin-title">
-      <p class="kicker">Администратор</p>
+      <p class="kicker">Владелец</p>
       <h1 id="admin-title">Вход</h1>
-      <p class="lead">Учебный пользователь. После входа открывается набросок CRM, данные никуда не уходят.</p>
+      <p class="lead">Пароль проверяет сервер. После входа виден список заявок.</p>
       <form id="admin-login">
         <div class="field">
-          <label for="login">Логин</label>
-          <input id="login" name="login" type="text" autocomplete="username" required maxlength="80" value="admin">
-        </div>
-        <div class="field">
           <label for="password">Пароль</label>
-          <input id="password" name="password" type="password" autocomplete="current-password" required maxlength="80" value="demo">
+          <input id="password" name="password" type="password" autocomplete="current-password" required maxlength="200">
         </div>
         <button type="submit">Войти</button>
-        <p class="form-note" id="admin-note">Демо-админ: логин admin, пароль demo.</p>
+        <p class="form-note" id="admin-note" role="status"></p>
       </form>
     </section>
 
     <section class="crm" id="crm" hidden aria-labelledby="crm-title">
-      <p class="kicker">CRM · учебный набросок</p>
-      <h1 id="crm-title">Демо-админ</h1>
-      <p class="who" id="who">Вы вошли как демо-админ.</p>
-      <p class="lead">Имена, телефоны и этапы ниже выдуманы для эскиза. Это не клиенты и не заявки с сайта.</p>
-
-      <h2 id="leads">Заявки</h2>
-      <div class="table-wrap">
+      <p class="kicker">Заявки</p>
+      <h1 id="crm-title">Список</h1>
+      <p class="lead" id="empty" hidden>Заявок пока нет.</p>
+      <div class="table-wrap" id="table-wrap" hidden>
         <table>
           <thead>
             <tr>
+              <th>Когда</th>
               <th>Имя</th>
               <th>Телефон</th>
               <th>Тип объекта</th>
+              <th>Откуда</th>
               <th>Этап</th>
             </tr>
           </thead>
-          <tbody>
-            <tr>
-              <td>Анна К.</td>
-              <td>+7 900 000-00-01</td>
-              <td>Автомойка</td>
-              <td>Новая</td>
-            </tr>
-            <tr>
-              <td>Игорь С.</td>
-              <td>+7 900 000-00-02</td>
-              <td>Кофейня</td>
-              <td>В работе</td>
-            </tr>
-            <tr>
-              <td>Марина Л.</td>
-              <td>+7 900 000-00-03</td>
-              <td>Клиника</td>
-              <td>Сдана</td>
-            </tr>
-          </tbody>
+          <tbody id="rows"></tbody>
         </table>
       </div>
 
-      <h2 id="objects">Объекты</h2>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Объект</th>
-              <th>Что известно</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Стоматологическая клиника</td>
-              <td>1024&nbsp;м². Генподряд от демонтажа до инженерии.</td>
-            </tr>
-            <tr>
-              <td>Кофе Лайк</td>
-              <td>Сеть кофеен.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-      <p class="range">В договоре фиксированная цена, гарантия 2&nbsp;года, оплата наличными и безналичным переводом, поэтапный контроль.</p>
+      <h2>Вручную</h2>
+      <form id="manual">
+        <div class="field">
+          <label for="manual-name">Имя</label>
+          <input id="manual-name" required maxlength="80">
+        </div>
+        <div class="field">
+          <label for="manual-phone">Телефон</label>
+          <input id="manual-phone" required maxlength="40">
+        </div>
+        <div class="field">
+          <label for="manual-object">Тип объекта</label>
+          <input id="manual-object" required maxlength="80">
+        </div>
+        <button type="submit">Добавить</button>
+        <p class="form-note" id="manual-note" role="status"></p>
+      </form>
     </section>
   </main>
   <footer class="foot">
@@ -114,55 +82,165 @@
   </footer>
   <script>
     (function () {
-      var demoLogin = "admin";
-      var demoPassword = "demo";
-      var key = "mehanika-demo-admin";
+      var stages = [
+        ["new", "Новая"],
+        ["measure", "Замер"],
+        ["contract", "Договор"],
+        ["work", "В работе"],
+        ["done", "Сдана"],
+        ["warranty", "Гарантия"]
+      ];
+      var sources = { site: "Сайт", telegram: "Telegram", manual: "Вручную" };
       var door = document.getElementById("door");
       var crm = document.getElementById("crm");
-      var note = document.getElementById("admin-note");
-      var siteNav = document.getElementById("site-nav");
-      var crmNav = document.getElementById("crm-nav");
-      var loginLink = document.getElementById("login-link");
+      var enter = document.getElementById("enter");
       var logout = document.getElementById("logout");
+      var note = document.getElementById("admin-note");
 
-      function showCrm() {
-        door.hidden = true;
-        crm.hidden = false;
-        siteNav.hidden = true;
-        crmNav.hidden = false;
-        loginLink.hidden = true;
-        logout.hidden = false;
-        document.title = "CRM — Механика Комфорта";
+      function csrf() {
+        var match = document.cookie.match(/(?:^|; )XSRF-TOKEN=([^;]*)/);
+        return match ? decodeURIComponent(match[1]) : "";
+      }
+
+      function api(path, options) {
+        options = options || {};
+        options.credentials = "same-origin";
+        options.headers = options.headers || {};
+        if (options.method && options.method !== "GET") {
+          options.headers["X-XSRF-TOKEN"] = csrf();
+          if (options.body) {
+            options.headers["Content-Type"] = "application/json";
+          }
+        }
+        return fetch(path, options);
       }
 
       function showDoor() {
         door.hidden = false;
         crm.hidden = true;
-        siteNav.hidden = false;
-        crmNav.hidden = true;
-        loginLink.hidden = false;
+        enter.hidden = false;
         logout.hidden = true;
-        document.title = "Вход администратора — Механика Комфорта";
+        document.title = "Вход — Механика Комфорта";
       }
 
-      if (sessionStorage.getItem(key) === "1") showCrm();
+      function showList() {
+        door.hidden = true;
+        crm.hidden = false;
+        enter.hidden = true;
+        logout.hidden = false;
+        document.title = "Заявки — Механика Комфорта";
+        load();
+      }
+
+      function load() {
+        api("/api/leads").then(function (response) {
+          if (response.status === 401) {
+            showDoor();
+            return null;
+          }
+          return response.json();
+        }).then(function (rows) {
+          if (!rows) return;
+          var body = document.getElementById("rows");
+          body.replaceChildren();
+          document.getElementById("empty").hidden = rows.length !== 0;
+          document.getElementById("table-wrap").hidden = rows.length === 0;
+          rows.forEach(function (lead) {
+            var tr = document.createElement("tr");
+            tr.append(cell(when(lead.createdAt)));
+            tr.append(cell(lead.name));
+            tr.append(cell(lead.phone));
+            tr.append(cell(lead.objectType));
+            tr.append(cell(sources[lead.source] || lead.source));
+            var select = document.createElement("select");
+            stages.forEach(function (pair) {
+              var option = document.createElement("option");
+              option.value = pair[0];
+              option.textContent = pair[1];
+              if (pair[0] === lead.stage) option.selected = true;
+              select.append(option);
+            });
+            select.addEventListener("change", function () {
+              api("/api/leads/" + lead.id, {
+                method: "PATCH",
+                body: JSON.stringify({ stage: select.value })
+              });
+            });
+            var td = document.createElement("td");
+            td.append(select);
+            tr.append(td);
+            body.append(tr);
+          });
+        });
+      }
+
+      function cell(text) {
+        var td = document.createElement("td");
+        td.textContent = text;
+        return td;
+      }
+
+      function when(value) {
+        var date = new Date(value);
+        if (Number.isNaN(date.getTime())) return "";
+        return new Intl.DateTimeFormat("ru-RU", {
+          timeZone: "Europe/Saratov",
+          day: "2-digit",
+          month: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit"
+        }).format(date);
+      }
+
+      api("/api/session").then(function (response) {
+        if (response.status === 204) showList();
+        else showDoor();
+      });
 
       document.getElementById("admin-login").addEventListener("submit", function (event) {
         event.preventDefault();
-        var login = document.getElementById("login").value.trim();
-        var password = document.getElementById("password").value;
-        if (login === demoLogin && password === demoPassword) {
-          sessionStorage.setItem(key, "1");
-          note.textContent = "Демо-админ: логин admin, пароль demo.";
-          showCrm();
-          return;
-        }
-        note.textContent = "Не подошло. Учебный пользователь: логин admin, пароль demo.";
+        note.textContent = "";
+        api("/api/session", {
+          method: "POST",
+          body: JSON.stringify({ password: document.getElementById("password").value })
+        }).then(function (response) {
+          if (response.status === 204) {
+            document.getElementById("password").value = "";
+            showList();
+            return;
+          }
+          note.textContent = "Пароль не подошёл.";
+        });
+      });
+
+      document.getElementById("manual").addEventListener("submit", function (event) {
+        event.preventDefault();
+        var manualNote = document.getElementById("manual-note");
+        manualNote.textContent = "";
+        api("/api/leads", {
+          method: "POST",
+          body: JSON.stringify({
+            name: document.getElementById("manual-name").value,
+            phone: document.getElementById("manual-phone").value,
+            objectType: document.getElementById("manual-object").value,
+            source: "manual"
+          })
+        }).then(function (response) {
+          if (response.status === 201) {
+            document.getElementById("manual").reset();
+            load();
+            return;
+          }
+          return response.json().then(function (body) {
+            manualNote.textContent = body.error === "phone" ? "Нужен телефон из 10–15 цифр." : "Проверьте поля.";
+          });
+        });
       });
 
       logout.addEventListener("click", function () {
-        sessionStorage.removeItem(key);
-        showDoor();
+        api("/api/session", { method: "DELETE" }).then(function () {
+          showDoor();
+        });
       });
     })();
   </script>

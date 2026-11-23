@@ -5,13 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f6f3ee">
   <title>Механика Комфорта — коммерческая отделка</title>
+  <link rel="icon" href="logo.jpg" type="image/jpeg">
   <meta name="description" content="Механика Комфорта: отделка коммерческих помещений, общестроительные работы, спецмонтаж, поставка черновых материалов и помощь с выбором чистовых материалов. Фиксированная цена в договоре, гарантия 2 года.">
   <link rel="stylesheet" href="site.css">
 </head>
 <body>
   <a class="skip" href="#main">К содержанию</a>
   <header class="rail">
-    <a class="logo" href="index.html">Механика Комфорта</a>
+    <a class="logo" href="index.html"><img src="logo.jpg" alt="Механика Комфорта"></a>
     <nav aria-label="Разделы">
       <a href="#work">Работы</a>
       <a href="#cases">Объекты</a>
@@ -23,6 +24,7 @@
   <main class="page" id="main">
     <section class="hero" aria-labelledby="hero-title">
       <div class="ring" aria-hidden="true"></div>
+      <img class="hero-mark" src="logo.jpg" alt="">
       <p class="kicker">Коммерческие помещения</p>
       <h1 id="hero-title">Отделка коммерческих помещений</h1>
       <p class="index">001</p>
@@ -85,14 +87,14 @@
         </div>
         <div class="field">
           <label for="phone">Телефон</label>
-          <input id="phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" required maxlength="20" spellcheck="false">
+          <input id="phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" required maxlength="40" spellcheck="false">
         </div>
         <div class="field">
           <label for="object-type">Тип объекта</label>
           <input id="object-type" name="object-type" type="text" required maxlength="80" placeholder="Автомойка, кофейня или клиника">
         </div>
         <button type="submit">Оставить заявку</button>
-        <p class="form-note" id="form-note">Эскиз страницы: заявка никуда не отправляется.</p>
+        <p class="form-note" id="form-note" role="status"></p>
       </form>
     </section>
   </main>
@@ -103,6 +105,31 @@
   <script>
     document.getElementById("lead").addEventListener("submit", function (event) {
       event.preventDefault();
+      var note = document.getElementById("form-note");
+      note.textContent = "";
+      fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: document.getElementById("name").value,
+          phone: document.getElementById("phone").value,
+          objectType: document.getElementById("object-type").value,
+          source: "site"
+        })
+      }).then(function (response) {
+        if (response.status === 201) {
+          document.getElementById("lead").reset();
+          note.textContent = "Заявку записали.";
+          return;
+        }
+        return response.json().then(function (body) {
+          note.textContent = body.error === "phone"
+            ? "Нужен телефон из 10–15 цифр."
+            : "Проверьте имя, телефон и тип объекта.";
+        });
+      }).catch(function () {
+        note.textContent = "Не удалось записать заявку. Попробуйте ещё раз.";
+      });
     });
   </script>
 </body>
