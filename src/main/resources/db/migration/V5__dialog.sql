@@ -1,0 +1,10 @@
+alter table leads add column city varchar(80);
+alter table leads add column works_json varchar(400);
+alter table leads add column electro integer;
+alter table leads add column water integer;
+alter table leads add column cameras integer;
+alter table leads add column lan integer;
+alter table leads add column chase boolean;
+alter table leads add column height_m numeric(4, 1);
+alter table leads add column complex_items varchar(200);
+alter table leads add column complex_note varchar(1000);

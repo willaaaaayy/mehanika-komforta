@@ -2,6 +2,7 @@ package ru.mehanikakomforta.leads;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 
 public record LeadResponse(
         Long id,
@@ -15,6 +16,16 @@ public record LeadResponse(
         String grade,
         String condition,
         String packageCode,
+        List<String> works,
+        String city,
+        Integer electro,
+        Integer water,
+        Integer cameras,
+        Integer lan,
+        Boolean chase,
+        BigDecimal heightM,
+        List<String> complexItems,
+        String complexNote,
         TelegramView telegram
 ) {
     public record TelegramView(
@@ -52,6 +63,16 @@ public record LeadResponse(
                 lead.getGrade(),
                 lead.getConditionCode(),
                 lead.getPackageCode(),
+                SurveyText.list(lead.getWorksJson()),
+                lead.getCity(),
+                lead.getElectro(),
+                lead.getWater(),
+                lead.getCameras(),
+                lead.getLan(),
+                lead.getChase(),
+                lead.getHeightM(),
+                SurveyText.list(lead.getComplexItems()),
+                lead.getComplexNote(),
                 telegram
         );
     }

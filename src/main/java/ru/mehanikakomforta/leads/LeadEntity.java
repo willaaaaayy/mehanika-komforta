@@ -71,6 +71,31 @@ public class LeadEntity {
     @Column(name = "package_code", length = 16)
     private String packageCode;
 
+    @Column(length = 80)
+    private String city;
+
+    @Column(name = "works_json", length = 400)
+    private String worksJson;
+
+    private Integer electro;
+
+    private Integer water;
+
+    private Integer cameras;
+
+    private Integer lan;
+
+    private Boolean chase;
+
+    @Column(name = "height_m", precision = 4, scale = 1)
+    private BigDecimal heightM;
+
+    @Column(name = "complex_items", length = 200)
+    private String complexItems;
+
+    @Column(name = "complex_note", length = 1000)
+    private String complexNote;
+
     protected LeadEntity() {
     }
 
@@ -159,6 +184,63 @@ public class LeadEntity {
 
     public String getPackageCode() {
         return packageCode;
+    }
+
+    public String getCity() {
+        return city;
+    }
+
+    public String getWorksJson() {
+        return worksJson;
+    }
+
+    public Integer getElectro() {
+        return electro;
+    }
+
+    public Integer getWater() {
+        return water;
+    }
+
+    public Integer getCameras() {
+        return cameras;
+    }
+
+    public Integer getLan() {
+        return lan;
+    }
+
+    public Boolean getChase() {
+        return chase;
+    }
+
+    public BigDecimal getHeightM() {
+        return heightM;
+    }
+
+    public String getComplexItems() {
+        return complexItems;
+    }
+
+    public String getComplexNote() {
+        return complexNote;
+    }
+
+    public void survey(LeadRequest request) {
+        this.floorArea = request.floorArea();
+        this.grade = request.grade();
+        this.conditionCode = request.condition();
+        this.packageCode = request.packageCode();
+        this.city = request.city() == null ? null : request.city().trim();
+        this.worksJson = SurveyText.json(request.works());
+        this.electro = request.electro();
+        this.water = request.water();
+        this.cameras = request.cameras();
+        this.lan = request.lan();
+        this.chase = request.chase();
+        this.heightM = request.heightM();
+        this.complexItems = SurveyText.json(request.complexItems());
+        this.complexNote = request.complexNote() == null ? null : request.complexNote().trim();
     }
 
     public void edit(

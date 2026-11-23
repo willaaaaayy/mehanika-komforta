@@ -430,6 +430,37 @@ class LeadScenariosTest {
                 .andExpect(jsonPath("$.teaching").value(true));
     }
 
+    @Test
+    void botSavesTheFullDialogAndOldLeadsStayIntact() throws Exception {
+        MockMvc mvc = mvc();
+        mvc.perform(post("/api/leads")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Старая","phone":"79001110000","objectType":"Офис","source":"site"}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.city").doesNotExist())
+                .andExpect(jsonPath("$.works").doesNotExist())
+                .andExpect(jsonPath("$.floorArea").doesNotExist());
+        mvc.perform(post("/api/leads")
+                        .header("X-Lead-Token", "test-lead-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Полный","phone":"79001110001","objectType":"Квартира","source":"telegram","floorArea":42.5,"grade":"standard","condition":"old","packageCode":null,"works":["screed","plaster"],"city":"Казань","electro":4,"water":null,"cameras":null,"lan":null,"chase":true,"heightM":3.2,"complexItems":null,"complexNote":null}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.floorArea").value(42.5))
+                .andExpect(jsonPath("$.grade").value("standard"))
+                .andExpect(jsonPath("$.condition").value("old"))
+                .andExpect(jsonPath("$.packageCode").doesNotExist())
+                .andExpect(jsonPath("$.works[0]").value("screed"))
+                .andExpect(jsonPath("$.city").value("Казань"))
+                .andExpect(jsonPath("$.electro").value(4))
+                .andExpect(jsonPath("$.water").doesNotExist())
+                .andExpect(jsonPath("$.chase").value(true))
+                .andExpect(jsonPath("$.heightM").value(3.2));
+    }
+
     private static MockHttpSession session(MvcResult result) {
         return (MockHttpSession) result.getRequest().getSession(false);
     }

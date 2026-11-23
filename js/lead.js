@@ -127,7 +127,63 @@ function apply(data) {
   saved = snapshot();
   dirty = false;
   card.hidden = false;
+  showDialog(data);
   offerDraft();
+}
+
+const WORK_TITLES = {
+  screed: "Стяжка пола",
+  plaster: "Штукатурка стен по маякам",
+  putty: "Шпаклёвка стен под покраску",
+  paint_walls: "Покраска стен",
+  paint_ceiling: "Покраска потолка",
+  drywall: "Перегородки и обшивка ГКЛ",
+  tile_floor: "Плитка на пол",
+  tile_walls: "Плитка на стены",
+  laminate: "Ламинат",
+  wallpaper: "Обои",
+  stretch: "Натяжной потолок"
+};
+
+const COMPLEX_TITLES = {
+  panel: "Сборка щита",
+  power: "Промышленная электрика",
+  air: "Сжатый воздух",
+  acs: "СКУД",
+  audio: "Аудиосистема",
+  cctv: "Видеонаблюдение нестандарт"
+};
+
+function fact(list, label, value) {
+  if (value == null || value === "") return;
+  const term = document.createElement("dt");
+  term.textContent = label;
+  const detail = document.createElement("dd");
+  detail.textContent = value;
+  list.append(term, detail);
+}
+
+function titled(ids, titles) {
+  if (ids == null) return null;
+  if (!ids.length) return "не выбраны";
+  return ids.map(function (id) { return titles[id] || id; }).join(", ");
+}
+
+function showDialog(data) {
+  const box = document.getElementById("dialog-facts");
+  const list = document.getElementById("dialog-facts-list");
+  list.replaceChildren();
+  fact(list, "Город", data.city);
+  fact(list, "Работы", titled(data.works, WORK_TITLES));
+  fact(list, "Электроточки", data.electro);
+  fact(list, "Сантехнические точки", data.water);
+  fact(list, "Камеры", data.cameras);
+  fact(list, "Интернет и СКС", data.lan);
+  fact(list, "Штробление", data.chase == null ? null : (data.chase ? "Да" : "Нет"));
+  fact(list, "Высота потолка, м", data.heightM);
+  fact(list, "Сложная система", titled(data.complexItems, COMPLEX_TITLES));
+  fact(list, "Комментарий", data.complexNote);
+  box.hidden = list.childElementCount === 0;
 }
 
 function offerDraft() {

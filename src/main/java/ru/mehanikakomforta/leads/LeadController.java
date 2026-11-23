@@ -47,6 +47,9 @@ public class LeadController {
             @RequestHeader(value = "X-Lead-Token", required = false) String token
     ) {
         String problem = LeadRules.check(request);
+        if (problem == null) {
+            problem = SurveyText.check(request, prices.document());
+        }
         if (problem != null) {
             return ResponseEntity.badRequest().body(new ApiError(problem));
         }
@@ -64,6 +67,7 @@ public class LeadController {
                 LeadRules.objectType(request),
                 source
         );
+        lead.survey(request);
         if (request.telegram() != null) {
             lead.telegram(
                     request.telegram().id(),
