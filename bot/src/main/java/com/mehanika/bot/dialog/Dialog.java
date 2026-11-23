@@ -17,6 +17,7 @@ import com.mehanika.bot.catalog.CatalogRepository;
 import com.mehanika.bot.catalog.PriceCatalog;
 import com.mehanika.bot.lead.AccountLookup;
 import com.mehanika.bot.lead.CrmLeadSink;
+import com.mehanika.bot.lead.LeadFacts;
 import com.mehanika.bot.lead.LeadPhoto;
 import com.mehanika.bot.lead.LeadStore;
 import com.mehanika.bot.lead.TelegramProfile;
@@ -595,7 +596,7 @@ public class Dialog {
         }
         TelegramProfile profile = accounts.load(session.userId, session.username, session.firstName, session.lastName);
         CrmLeadSink.Result forwarded = crm.deliver(
-                session.name, session.phone, objectLabel(session.objectType), profile, List.copyOf(session.photos));
+                session.name, session.phone, objectLabel(session.objectType), session.facts(), profile, List.copyOf(session.photos));
         if (forwarded != CrmLeadSink.Result.UNAVAILABLE) {
             crm.remember(createdAt);
         }
@@ -832,6 +833,16 @@ public class Dialog {
                     section, objectType, condition, city, grade, floorArea, finishMode,
                     works == null ? null : List.copyOf(works),
                     electro, water, cameras, lan, chase, heightM,
+                    complexItems == null ? null : List.copyOf(complexItems),
+                    complexNote);
+        }
+
+        LeadFacts facts() {
+            String packageCode = "paint".equals(finishMode) || "turnkey".equals(finishMode) ? finishMode : null;
+            return new LeadFacts(
+                    floorArea, grade, condition, packageCode,
+                    works == null ? null : List.copyOf(works),
+                    city, electro, water, cameras, lan, chase, heightM,
                     complexItems == null ? null : List.copyOf(complexItems),
                     complexNote);
         }

@@ -9,7 +9,7 @@ public interface CrmLeadSink {
 
     Result forward(String name, String phone, String objectType);
 
-    default Result deliver(String name, String phone, String objectType, TelegramProfile profile, List<LeadPhoto> photos) {
+    default Result deliver(String name, String phone, String objectType, LeadFacts facts, TelegramProfile profile, List<LeadPhoto> photos) {
         return forward(name, phone, objectType);
     }
 

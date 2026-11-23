@@ -19,6 +19,7 @@ import com.mehanika.bot.catalog.CatalogRepository;
 import com.mehanika.bot.dialog.Dialog;
 import com.mehanika.bot.lead.CrmForwarder;
 import com.mehanika.bot.lead.CrmLeadSink;
+import com.mehanika.bot.lead.LeadFacts;
 import com.mehanika.bot.lead.LeadPhoto;
 import com.mehanika.bot.lead.TelegramProfile;
 import com.mehanika.bot.lead.LeadStore;
@@ -68,7 +69,13 @@ class CrmForwarderTest {
                 types.add(payload.contains("filename=\"photo.jpg\"") ? "photo.jpg" : "other");
             } else {
                 String json = new String(request, StandardCharsets.UTF_8);
-                types.add(json.contains("\"username\":\"anna\"") && json.contains("\"firstName\":\"Анна\"") ? "account" : "lead");
+                types.add(json.contains("\"username\":\"anna\"")
+                        && json.contains("\"firstName\":\"Анна\"")
+                        && json.contains("\"floorArea\":40.0")
+                        && json.contains("\"city\":\"Казань\"")
+                        && json.contains("\"packageCode\":\"paint\"")
+                        && json.contains("\"chase\":false")
+                        ? "account" : "lead");
             }
             byte[] ok = "{\"id\":7}".getBytes(StandardCharsets.UTF_8);
             exchange.sendResponseHeaders(201, ok.length);
@@ -83,6 +90,8 @@ class CrmForwarderTest {
             byte[] jpeg = new byte[] {(byte) 0xff, (byte) 0xd8, (byte) 0xff, 1, 2, 3};
             assertEquals(CrmLeadSink.Result.SENT, forwarder.deliver(
                     "Анна", "9000000000", "Квартира",
+                    new LeadFacts(40.0, "standard", "new", "paint", List.of("screed"), "Казань",
+                            12, 4, 0, 2, false, 2.7, null, null),
                     new TelegramProfile(42, "anna", "Анна", "", "коротко", new LeadPhoto("image/jpeg", jpeg)),
                     List.of(new LeadPhoto("image/jpeg", jpeg))));
             assertEquals(List.of("/api/leads", "/api/leads/7/photos", "/api/leads/7/telegram-photo"), paths);

@@ -48,12 +48,12 @@ public class CrmForwarder implements CrmLeadSink {
 
     @Override
     public CrmLeadSink.Result forward(String name, String phone, String objectType) {
-        return postLead(name, phone, objectType, null).result();
+        return postLead(name, phone, objectType, null, null).result();
     }
 
     @Override
-    public CrmLeadSink.Result deliver(String name, String phone, String objectType, TelegramProfile profile, List<LeadPhoto> photos) {
-        Posted posted = postLead(name, phone, objectType, profile);
+    public CrmLeadSink.Result deliver(String name, String phone, String objectType, LeadFacts facts, TelegramProfile profile, List<LeadPhoto> photos) {
+        Posted posted = postLead(name, phone, objectType, facts, profile);
         if (posted.result() != CrmLeadSink.Result.SENT || posted.id() < 0) {
             return posted.result();
         }
@@ -68,7 +68,7 @@ public class CrmForwarder implements CrmLeadSink {
         return CrmLeadSink.Result.SENT;
     }
 
-    private Posted postLead(String name, String phone, String objectType, TelegramProfile profile) {
+    private Posted postLead(String name, String phone, String objectType, LeadFacts facts, TelegramProfile profile) {
         if (url.isBlank() || token.isBlank()) {
             return new Posted(CrmLeadSink.Result.UNAVAILABLE, -1);
         }
@@ -83,6 +83,22 @@ public class CrmForwarder implements CrmLeadSink {
         body.put("phone", cleanPhone);
         body.put("objectType", cleanObject);
         body.put("source", "telegram");
+        if (facts != null) {
+            putDecimal(body, "floorArea", facts.floorArea());
+            putText(body, "grade", facts.grade());
+            putText(body, "condition", facts.condition());
+            putText(body, "packageCode", facts.packageCode());
+            putList(body, "works", facts.works());
+            putText(body, "city", facts.city());
+            putInt(body, "electro", facts.electro());
+            putInt(body, "water", facts.water());
+            putInt(body, "cameras", facts.cameras());
+            putInt(body, "lan", facts.lan());
+            putBoolean(body, "chase", facts.chase());
+            putDecimal(body, "heightM", facts.heightM());
+            putList(body, "complexItems", facts.complexItems());
+            putText(body, "complexNote", facts.complexNote());
+        }
         if (profile != null) {
             ObjectNode telegram = body.putObject("telegram");
             telegram.put("id", profile.id());
@@ -160,6 +176,49 @@ public class CrmForwarder implements CrmLeadSink {
             log.warn("crm photo failed ({})", ex.getClass().getSimpleName());
         } catch (Exception ex) {
             log.warn("crm photo failed ({})", ex.getClass().getSimpleName());
+        }
+    }
+
+    private static void putText(ObjectNode body, String field, String value) {
+        if (value == null) {
+            body.putNull(field);
+        } else {
+            body.put(field, value);
+        }
+    }
+
+    private static void putDecimal(ObjectNode body, String field, Double value) {
+        if (value == null) {
+            body.putNull(field);
+        } else {
+            body.put(field, value);
+        }
+    }
+
+    private static void putInt(ObjectNode body, String field, Integer value) {
+        if (value == null) {
+            body.putNull(field);
+        } else {
+            body.put(field, value);
+        }
+    }
+
+    private static void putBoolean(ObjectNode body, String field, Boolean value) {
+        if (value == null) {
+            body.putNull(field);
+        } else {
+            body.put(field, value);
+        }
+    }
+
+    private static void putList(ObjectNode body, String field, List<String> values) {
+        if (values == null) {
+            body.putNull(field);
+            return;
+        }
+        var array = body.putArray(field);
+        for (String value : values) {
+            array.add(value);
         }
     }
 
