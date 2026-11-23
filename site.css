@@ -137,6 +137,11 @@ a {
   background: #000;
 }
 
+body.in-crm .site-nav,
+body.in-crm .to-site {
+  display: none !important;
+}
+
 .page {
   margin-left: var(--rail);
 }

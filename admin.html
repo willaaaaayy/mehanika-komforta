@@ -13,7 +13,7 @@
   <a class="skip" href="#main">К содержанию</a>
   <header class="rail">
     <a class="logo" href="index.html"><img src="logo.jpg" alt="Механика Комфорта"></a>
-    <nav aria-label="Разделы">
+    <nav class="site-nav" aria-label="Разделы">
       <a href="index.html#work">Работы</a>
       <a href="index.html#cases">Объекты</a>
       <a href="index.html#why">Подход</a>
@@ -112,7 +112,7 @@
   </main>
   <footer class="foot">
     <p>Механика Комфорта</p>
-    <p><a href="index.html">На сайт</a></p>
+    <p class="to-site"><a href="index.html">На сайт</a></p>
   </footer>
   <script>
     (function () {
@@ -149,7 +149,11 @@
         return fetch(path, options);
       }
 
+      var logo = document.querySelector(".logo");
+
       function showDoor() {
+        document.body.classList.remove("in-crm");
+        logo.setAttribute("href", "index.html");
         door.hidden = false;
         crm.hidden = true;
         enter.hidden = false;
@@ -158,6 +162,8 @@
       }
 
       function showList() {
+        document.body.classList.add("in-crm");
+        logo.setAttribute("href", "#");
         door.hidden = true;
         crm.hidden = false;
         enter.hidden = true;
@@ -341,6 +347,10 @@
             manualNote.textContent = body.error === "phone" ? "Нужен телефон из 10–15 цифр." : "Проверьте поля.";
           });
         });
+      });
+
+      logo.addEventListener("click", function (event) {
+        if (document.body.classList.contains("in-crm")) event.preventDefault();
       });
 
       logout.addEventListener("click", function () {
