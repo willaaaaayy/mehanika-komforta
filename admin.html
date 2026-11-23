@@ -88,7 +88,7 @@
       <section class="card" id="prices-box">
         <h2>Расценки</h2>
         <p id="prices-note"></p>
-        <input id="prices-file" type="file" accept="application/json">
+        <input id="prices-file" type="file" accept=".pdf,.xlsx,.xls,.json,application/pdf,application/json">
         <button type="button" id="prices-save">Загрузить прайс</button>
       </section>
       <article class="card" id="card" hidden>
@@ -434,14 +434,28 @@
 
       document.getElementById("prices-save").addEventListener("click", function () {
         var file = document.getElementById("prices-file").files[0];
+        var note = document.getElementById("prices-note");
         if (!file) return;
-        file.text().then(function (text) {
-          return api("/api/prices", { method: "PUT", body: text });
-        }).then(function (response) {
-          document.getElementById("prices-note").textContent = response.status === 200
+        var name = file.name.toLowerCase();
+        var done = function (response) {
+          note.textContent = response.status === 200
             ? "Прайс записан. Бот прочитает его при следующем расчёте."
-            : "Файл не подошёл. Нужен тот же формат, что у текущего прайса.";
-        });
+            : "Файл не подошёл. Нужны PDF или Excel с названиями работ, либо JSON текущего прайса.";
+        };
+        if (name.endsWith(".json")) {
+          file.text().then(function (text) {
+            return api("/api/prices", { method: "PUT", body: text });
+          }).then(done);
+          return;
+        }
+        var data = new FormData();
+        data.append("file", file);
+        fetch("/api/prices", {
+          method: "POST",
+          credentials: "same-origin",
+          headers: { "X-XSRF-TOKEN": csrf() },
+          body: data
+        }).then(done);
       });
 
       document.getElementById("manual").addEventListener("submit", function (event) {

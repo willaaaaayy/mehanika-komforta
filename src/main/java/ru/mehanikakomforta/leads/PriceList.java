@@ -8,8 +8,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -23,8 +25,15 @@ public class PriceList {
     public PriceList() {
         try {
             if (Files.isRegularFile(botFile)) {
-                this.document = mapper.readTree(Files.readString(botFile));
-                return;
+                try {
+                    JsonNode loaded = mapper.readTree(Files.readString(botFile));
+                    if (loaded.get("works") != null && loaded.get("grades") != null && loaded.get("packages") != null) {
+                        this.document = loaded;
+                        return;
+                    }
+                } catch (Exception ignored) {
+                    // A torn file must not stop the service. The classpath copy stays until the next whole write.
+                }
             }
             try (InputStream input = PriceList.class.getResourceAsStream("/policies/prices.json")) {
                 if (input == null) {
@@ -43,17 +52,47 @@ public class PriceList {
 
     public synchronized void replace(String json) {
         JsonNode next = mapper.readTree(json);
-        if (next.get("works") == null || next.get("grades") == null || next.get("packages") == null) {
+        if (!(next instanceof tools.jackson.databind.node.ObjectNode catalog)
+                || next.get("works") == null
+                || next.get("grades") == null
+                || next.get("packages") == null) {
             throw new IllegalArgumentException("prices");
         }
-        this.document = next;
+        if (!catalog.has("teaching")) {
+            catalog.put("teaching", document.get("teaching") != null && document.get("teaching").asBoolean());
+        }
+        store(catalog);
+    }
+
+    public synchronized void replaceSheet(String filename, byte[] bytes) {
+        JsonNode next = mapper.readTree(mapper.writeValueAsString(document));
+        PriceSheet.apply(next, filename, bytes);
+        store(next);
+    }
+
+    private void store(JsonNode next) {
+        if (next.get("teaching") == null || next.get("works") == null) {
+            throw new IllegalArgumentException("prices");
+        }
+        String body = mapper.writeValueAsString(next);
+        JsonNode written = mapper.readTree(body);
+        if (written.get("teaching") == null || written.get("works") == null || written.get("grades") == null || written.get("packages") == null) {
+            throw new IllegalArgumentException("prices");
+        }
         try {
-            if (Files.isDirectory(botFile.getParent())) {
-                Files.writeString(botFile, mapper.writeValueAsString(next));
+            if (Files.isRegularFile(botFile)) {
+                Files.writeString(
+                        botFile,
+                        body,
+                        StandardCharsets.UTF_8,
+                        StandardOpenOption.WRITE,
+                        StandardOpenOption.TRUNCATE_EXISTING
+                );
             }
         } catch (IOException exception) {
             throw new IllegalStateException(exception);
         }
+        this.document = written;
     }
 
     public synchronized Estimate estimate(BigDecimal floor, String grade, String condition, String packageCode) {

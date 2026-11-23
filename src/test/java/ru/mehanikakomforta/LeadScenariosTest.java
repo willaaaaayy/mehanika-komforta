@@ -1,5 +1,10 @@
 package ru.mehanikakomforta;
 
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
+import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.font.PDType0Font;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -22,6 +27,10 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
 
 @SpringBootTest
 class LeadScenariosTest {
@@ -343,6 +352,82 @@ class LeadScenariosTest {
                 .andExpect(jsonPath("$.estimate.high").isNumber());
         mvc.perform(put("/api/prices").with(csrf()).content("{}"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void ownerUploadsExcelAndPdfIntoTheBotPrice() throws Exception {
+        MockMvc mvc = mvc();
+        byte[] sheet;
+        try (XSSFWorkbook workbook = new XSSFWorkbook()) {
+            var table = workbook.createSheet();
+            var header = table.createRow(0);
+            header.createCell(0).setCellValue("Работа");
+            header.createCell(1).setCellValue("Эконом");
+            header.createCell(2).setCellValue("Стандарт");
+            header.createCell(3).setCellValue("Премиум");
+            var screed = table.createRow(1);
+            screed.createCell(0).setCellValue("Стяжка пола");
+            screed.createCell(1).setCellValue(1000);
+            screed.createCell(2).setCellValue(2000);
+            screed.createCell(3).setCellValue(3000);
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            workbook.write(out);
+            sheet = out.toByteArray();
+        }
+        byte[] pdf;
+        try (PDDocument document = new PDDocument()) {
+            PDPage page = new PDPage();
+            document.addPage(page);
+            PDType0Font font = PDType0Font.load(document, Path.of("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf").toFile());
+            try (PDPageContentStream stream = new PDPageContentStream(document, page)) {
+                stream.beginText();
+                stream.setFont(font, 12);
+                stream.newLineAtOffset(50, 700);
+                stream.showText("Штукатурка стен по маякам 111 222 333");
+                stream.endText();
+            }
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            document.save(out);
+            pdf = out.toByteArray();
+        }
+        MvcResult login = mvc.perform(post("/api/session")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"password\":\"test-admin-secret\"}"))
+                .andExpect(status().isNoContent())
+                .andReturn();
+        mvc.perform(multipart("/api/prices").file(new MockMultipartFile("file", "prices.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", sheet)).with(csrf()))
+                .andExpect(status().isUnauthorized());
+        mvc.perform(multipart("/api/prices")
+                        .file(new MockMultipartFile("file", "prices.xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", sheet))
+                        .session(session(login))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.teaching").value(false))
+                .andExpect(jsonPath("$.works.screed.prices.economy").value(1000))
+                .andExpect(jsonPath("$.works.plaster.prices.economy").value(700));
+        mvc.perform(multipart("/api/prices")
+                        .file(new MockMultipartFile("file", "prices.pdf", "application/pdf", pdf))
+                        .session(session(login))
+                        .with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.works.plaster.prices.economy").value(111))
+                .andExpect(jsonPath("$.works.plaster.prices.premium").value(333))
+                .andExpect(jsonPath("$.works.screed.prices.economy").value(1000));
+        mvc.perform(multipart("/api/prices")
+                        .file(new MockMultipartFile("file", "empty.pdf", "application/pdf", "%PDF-1.4\n".getBytes(StandardCharsets.US_ASCII)))
+                        .session(session(login))
+                        .with(csrf()))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("prices"));
+        String original = new String(getClass().getResourceAsStream("/policies/prices.json").readAllBytes(), StandardCharsets.UTF_8);
+        mvc.perform(put("/api/prices")
+                        .session(session(login))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(original))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.teaching").value(true));
     }
 
     private static MockHttpSession session(MvcResult result) {

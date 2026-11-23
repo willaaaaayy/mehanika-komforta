@@ -10,7 +10,9 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import ru.mehanikakomforta.CrmProperties;
 import ru.mehanikakomforta.SecretMatch;
 import tools.jackson.databind.JsonNode;
@@ -105,6 +107,21 @@ public class LeadController {
         } catch (IllegalArgumentException exception) {
             return ResponseEntity.badRequest().body(new ApiError("prices"));
         } catch (RuntimeException exception) {
+            return ResponseEntity.badRequest().body(new ApiError("prices"));
+        }
+        return ResponseEntity.ok(prices.document());
+    }
+
+    @PostMapping(value = "/api/prices", consumes = "multipart/form-data")
+    public ResponseEntity<?> uploadPrices(@RequestParam(value = "file", required = false) MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return ResponseEntity.badRequest().body(new ApiError("prices"));
+        }
+        try {
+            prices.replaceSheet(file.getOriginalFilename(), file.getBytes());
+        } catch (IllegalArgumentException exception) {
+            return ResponseEntity.badRequest().body(new ApiError("prices"));
+        } catch (Exception exception) {
             return ResponseEntity.badRequest().body(new ApiError("prices"));
         }
         return ResponseEntity.ok(prices.document());
