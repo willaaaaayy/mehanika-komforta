@@ -459,7 +459,7 @@ pricesSave.addEventListener("click", async function () {
       return;
     }
     pricesStatus.hidden = false;
-    if (kind !== "json" && [400, 404, 405, 415, 501].includes(response.status)) {
+    if (kind !== "json" && [404, 405, 415, 501].includes(response.status)) {
       pricesStatus.textContent = "Сервер пока не принимает PDF и Excel. Файл не записан.";
       return;
     }
@@ -469,6 +469,7 @@ pricesSave.addEventListener("click", async function () {
     pricesStatus.textContent = "Не удалось загрузить файл.";
   } finally {
     setBusy(pricesSave, false);
+    pricesSave.disabled = !chosen;
   }
 });
 

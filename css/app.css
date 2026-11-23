@@ -370,6 +370,13 @@ button:disabled,
   cursor: not-allowed;
 }
 
+.btn-primary:disabled {
+  opacity: 1;
+  background: #e4e7ec;
+  border-color: #e4e7ec;
+  color: var(--text-muted);
+}
+
 .btn.is-loading {
   position: relative;
   color: transparent;
@@ -842,17 +849,8 @@ dialog::backdrop {
     box-shadow: var(--shadow);
   }
 
-  body.has-save {
-    padding-bottom: 84px;
-  }
-
-  body.has-save #save {
-    position: fixed;
-    left: 16px;
-    right: 16px;
-    bottom: 16px;
-    z-index: 12;
-    width: auto;
+  body.has-create {
+    padding-bottom: 96px;
   }
 
   table.leads thead {

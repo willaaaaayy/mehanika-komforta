@@ -133,12 +133,18 @@ function apply(data) {
 function offerDraft() {
   const raw = sessionStorage.getItem(draftKey());
   if (!raw || raw === saved) return;
+  let draft;
+  try {
+    draft = JSON.parse(raw);
+  } catch {
+    sessionStorage.removeItem(draftKey());
+    return;
+  }
   const keep = window.confirm("На этом устройстве есть несохранённые правки. Восстановить?");
   if (!keep) {
     sessionStorage.removeItem(draftKey());
     return;
   }
-  const draft = JSON.parse(raw);
   document.getElementById("name").value = draft.name || "";
   document.getElementById("phone").value = draft.phone || "";
   document.getElementById("object-type").value = draft.objectType || "";
