@@ -13,6 +13,10 @@
   box-sizing: border-box;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -461,6 +465,68 @@ button:hover,
 
   .trust {
     grid-template-columns: 1fr;
+  }
+}
+
+.crm {
+  padding: 4.5rem 8vw 4rem 4.5rem;
+}
+
+.crm h1 {
+  max-width: 14em;
+}
+
+.crm h2 {
+  margin-top: 2.4rem;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  margin-top: 1rem;
+}
+
+table {
+  width: 100%;
+  min-width: 36rem;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  padding: 0.85rem 1rem 0.85rem 0;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  vertical-align: top;
+}
+
+th {
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.who {
+  margin: 1rem 0 0;
+  color: var(--ink);
+}
+
+.logout {
+  margin-top: auto;
+}
+
+@media (max-width: 800px) {
+  .crm {
+    padding-left: 1.15rem;
+    padding-right: 1.15rem;
+  }
+
+  .logout {
+    margin-top: 0;
   }
 }
 

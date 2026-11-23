@@ -5,38 +5,107 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f6f3ee">
   <title>Вход администратора — Механика Комфорта</title>
-  <meta name="description" content="Вход администратора Механики Комфорта. Здесь будет CRM.">
+  <meta name="description" content="Учебный вход администратора Механики Комфорта и набросок CRM.">
   <link rel="stylesheet" href="site.css">
 </head>
 <body>
   <a class="skip" href="#main">К содержанию</a>
   <header class="rail">
     <a class="logo" href="index.html">Механика Комфорта</a>
-    <nav aria-label="Разделы">
+    <nav aria-label="Разделы" id="site-nav">
       <a href="index.html#work">Работы</a>
       <a href="index.html#cases">Объекты</a>
       <a href="index.html#why">Подход</a>
       <a href="index.html#request">Заявка</a>
     </nav>
-    <a class="login" href="admin.html" aria-current="page">Вход</a>
+    <nav aria-label="CRM" id="crm-nav" hidden>
+      <a href="#leads">Заявки</a>
+      <a href="#objects">Объекты</a>
+    </nav>
+    <a class="login" id="login-link" href="admin.html" aria-current="page">Вход</a>
+    <button class="login logout" id="logout" type="button" hidden>Выйти</button>
   </header>
   <main class="page" id="main">
-    <section class="door" aria-labelledby="admin-title">
+    <section class="door" id="door" aria-labelledby="admin-title">
       <p class="kicker">Администратор</p>
       <h1 id="admin-title">Вход</h1>
-      <p class="lead">Здесь будет CRM.</p>
+      <p class="lead">Учебный пользователь. После входа открывается набросок CRM, данные никуда не уходят.</p>
       <form id="admin-login">
         <div class="field">
           <label for="login">Логин</label>
-          <input id="login" name="login" type="text" autocomplete="username" required maxlength="80">
+          <input id="login" name="login" type="text" autocomplete="username" required maxlength="80" value="admin">
         </div>
         <div class="field">
           <label for="password">Пароль</label>
-          <input id="password" name="password" type="password" autocomplete="current-password" required maxlength="80">
+          <input id="password" name="password" type="password" autocomplete="current-password" required maxlength="80" value="demo">
         </div>
         <button type="submit">Войти</button>
-        <p class="form-note" id="admin-note">Вход не подключён: логин и пароль никуда не отправляются.</p>
+        <p class="form-note" id="admin-note">Демо-админ: логин admin, пароль demo.</p>
       </form>
+    </section>
+
+    <section class="crm" id="crm" hidden aria-labelledby="crm-title">
+      <p class="kicker">CRM · учебный набросок</p>
+      <h1 id="crm-title">Демо-админ</h1>
+      <p class="who" id="who">Вы вошли как демо-админ.</p>
+      <p class="lead">Имена, телефоны и этапы ниже выдуманы для эскиза. Это не клиенты и не заявки с сайта.</p>
+
+      <h2 id="leads">Заявки</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Имя</th>
+              <th>Телефон</th>
+              <th>Тип объекта</th>
+              <th>Этап</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Анна К.</td>
+              <td>+7 900 000-00-01</td>
+              <td>Автомойка</td>
+              <td>Новая</td>
+            </tr>
+            <tr>
+              <td>Игорь С.</td>
+              <td>+7 900 000-00-02</td>
+              <td>Кофейня</td>
+              <td>В работе</td>
+            </tr>
+            <tr>
+              <td>Марина Л.</td>
+              <td>+7 900 000-00-03</td>
+              <td>Клиника</td>
+              <td>Сдана</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2 id="objects">Объекты</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Объект</th>
+              <th>Что известно</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Стоматологическая клиника</td>
+              <td>1024&nbsp;м². Генподряд от демонтажа до инженерии.</td>
+            </tr>
+            <tr>
+              <td>Кофе Лайк</td>
+              <td>Сеть кофеен.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="range">В договоре фиксированная цена, гарантия 2&nbsp;года, оплата наличными и безналичным переводом, поэтапный контроль.</p>
     </section>
   </main>
   <footer class="foot">
@@ -44,9 +113,58 @@
     <p><a href="index.html">На сайт</a></p>
   </footer>
   <script>
-    document.getElementById("admin-login").addEventListener("submit", function (event) {
-      event.preventDefault();
-    });
+    (function () {
+      var demoLogin = "admin";
+      var demoPassword = "demo";
+      var key = "mehanika-demo-admin";
+      var door = document.getElementById("door");
+      var crm = document.getElementById("crm");
+      var note = document.getElementById("admin-note");
+      var siteNav = document.getElementById("site-nav");
+      var crmNav = document.getElementById("crm-nav");
+      var loginLink = document.getElementById("login-link");
+      var logout = document.getElementById("logout");
+
+      function showCrm() {
+        door.hidden = true;
+        crm.hidden = false;
+        siteNav.hidden = true;
+        crmNav.hidden = false;
+        loginLink.hidden = true;
+        logout.hidden = false;
+        document.title = "CRM — Механика Комфорта";
+      }
+
+      function showDoor() {
+        door.hidden = false;
+        crm.hidden = true;
+        siteNav.hidden = false;
+        crmNav.hidden = true;
+        loginLink.hidden = false;
+        logout.hidden = true;
+        document.title = "Вход администратора — Механика Комфорта";
+      }
+
+      if (sessionStorage.getItem(key) === "1") showCrm();
+
+      document.getElementById("admin-login").addEventListener("submit", function (event) {
+        event.preventDefault();
+        var login = document.getElementById("login").value.trim();
+        var password = document.getElementById("password").value;
+        if (login === demoLogin && password === demoPassword) {
+          sessionStorage.setItem(key, "1");
+          note.textContent = "Демо-админ: логин admin, пароль demo.";
+          showCrm();
+          return;
+        }
+        note.textContent = "Не подошло. Учебный пользователь: логин admin, пароль demo.";
+      });
+
+      logout.addEventListener("click", function () {
+        sessionStorage.removeItem(key);
+        showDoor();
+      });
+    })();
   </script>
 </body>
 </html>
