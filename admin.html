@@ -90,6 +90,12 @@
           <h2 id="card-name"></h2>
           <p id="card-stage"></p>
         </header>
+        <div id="card-account" hidden>
+          <img id="card-profile" alt="" hidden>
+          <p id="card-account-name"></p>
+          <p id="card-username"></p>
+          <p id="card-bio"></p>
+        </div>
         <div class="card-body">
           <dl>
             <dt>Телефон</dt>
@@ -106,6 +112,7 @@
             </label>
           </aside>
         </div>
+        <div id="card-photos"></div>
         <button type="button" id="card-close">К списку</button>
       </article>
     </section>
@@ -246,6 +253,37 @@
         document.getElementById("card-source").textContent = sources[lead.source] || lead.source;
         document.getElementById("card-date").textContent = when(lead.createdAt);
         cardStage.value = lead.stage;
+        var account = document.getElementById("card-account");
+        var profile = document.getElementById("card-profile");
+        profile.hidden = true;
+        profile.removeAttribute("src");
+        if (lead.telegram) {
+          account.hidden = false;
+          var accountName = (lead.telegram.firstName + " " + lead.telegram.lastName).trim();
+          document.getElementById("card-account-name").textContent = accountName;
+          document.getElementById("card-username").textContent = lead.telegram.username ? "@" + lead.telegram.username : "";
+          document.getElementById("card-bio").textContent = lead.telegram.bio || "";
+          if (lead.telegram.photo) {
+            profile.hidden = false;
+            profile.src = "/api/leads/" + id + "/telegram-photo";
+          }
+        } else {
+          account.hidden = true;
+        }
+        var photos = document.getElementById("card-photos");
+        photos.replaceChildren();
+        api("/api/leads/" + id + "/photos").then(function (response) {
+          if (response.status !== 200) return null;
+          return response.json();
+        }).then(function (items) {
+          if (!items) return;
+          items.forEach(function (item) {
+            var image = document.createElement("img");
+            image.alt = "";
+            image.src = "/api/leads/" + id + "/photos/" + item.id;
+            photos.append(image);
+          });
+        });
       }
 
       function load() {

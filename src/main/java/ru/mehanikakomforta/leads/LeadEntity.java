@@ -43,6 +43,21 @@ public class LeadEntity {
     @Column(nullable = false, length = 16)
     private LeadStage stage;
 
+    @Column(name = "telegram_id")
+    private Long telegramId;
+
+    @Column(name = "telegram_username", length = 32)
+    private String telegramUsername;
+
+    @Column(name = "telegram_first_name", length = 64)
+    private String telegramFirstName;
+
+    @Column(name = "telegram_last_name", length = 64)
+    private String telegramLastName;
+
+    @Column(name = "telegram_bio", length = 70)
+    private String telegramBio;
+
     protected LeadEntity() {
     }
 
@@ -87,5 +102,33 @@ public class LeadEntity {
     public void changeStage(LeadStage stage, Instant updatedAt) {
         this.stage = stage;
         this.updatedAt = updatedAt;
+    }
+
+    public void telegram(Long id, String username, String firstName, String lastName, String bio) {
+        this.telegramId = id;
+        this.telegramUsername = username;
+        this.telegramFirstName = firstName;
+        this.telegramLastName = lastName;
+        this.telegramBio = bio;
+    }
+
+    public Long getTelegramId() {
+        return telegramId;
+    }
+
+    public String getTelegramUsername() {
+        return telegramUsername;
+    }
+
+    public String getTelegramFirstName() {
+        return telegramFirstName;
+    }
+
+    public String getTelegramLastName() {
+        return telegramLastName;
+    }
+
+    public String getTelegramBio() {
+        return telegramBio;
     }
 }

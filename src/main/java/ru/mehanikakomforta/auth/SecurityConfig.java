@@ -45,6 +45,8 @@ public class SecurityConfig {
                 }))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.POST, "/api/leads").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/leads/*/photos").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/leads/*/telegram-photo").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/session").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/session").permitAll()
                         .requestMatchers("/api/**").authenticated()

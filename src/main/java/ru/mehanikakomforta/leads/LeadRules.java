@@ -24,7 +24,48 @@ public final class LeadRules {
         if (source(request.source()) == null) {
             return "source";
         }
+        return telegram(request.telegram());
+    }
+
+    public static String telegram(TelegramInput telegram) {
+        if (telegram == null) {
+            return null;
+        }
+        if (telegram.id() == null) {
+            return "telegram";
+        }
+        String username = text(telegram.username(), 32);
+        String firstName = text(telegram.firstName(), 64);
+        String lastName = text(telegram.lastName(), 64);
+        String bio = text(telegram.bio(), 70);
+        if (username == null || firstName == null || lastName == null || bio == null) {
+            return "telegram";
+        }
+        if (username.startsWith("@")) {
+            return "telegram";
+        }
         return null;
+    }
+
+    public static String username(TelegramInput telegram) {
+        return text(telegram.username(), 32);
+    }
+
+    public static String firstName(TelegramInput telegram) {
+        return text(telegram.firstName(), 64);
+    }
+
+    public static String lastName(TelegramInput telegram) {
+        return text(telegram.lastName(), 64);
+    }
+
+    public static String bio(TelegramInput telegram) {
+        return text(telegram.bio(), 70);
+    }
+
+    private static String text(String value, int max) {
+        String cleaned = value == null ? "" : value.trim();
+        return cleaned.length() > max ? null : cleaned;
     }
 
     public static LeadSource source(String raw) {

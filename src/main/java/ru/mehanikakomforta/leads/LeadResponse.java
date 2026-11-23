@@ -9,9 +9,32 @@ public record LeadResponse(
         String phone,
         String objectType,
         String source,
-        String stage
+        String stage,
+        TelegramView telegram
 ) {
+    public record TelegramView(
+            long id,
+            String username,
+            String firstName,
+            String lastName,
+            String bio,
+            boolean photo
+    ) {
+    }
+
     public static LeadResponse from(LeadEntity lead) {
+        return from(lead, false);
+    }
+
+    public static LeadResponse from(LeadEntity lead, boolean profilePhoto) {
+        TelegramView telegram = lead.getTelegramId() == null ? null : new TelegramView(
+                lead.getTelegramId(),
+                lead.getTelegramUsername(),
+                lead.getTelegramFirstName(),
+                lead.getTelegramLastName(),
+                lead.getTelegramBio(),
+                profilePhoto
+        );
         return new LeadResponse(
                 lead.getId(),
                 lead.getCreatedAt(),
@@ -19,7 +42,8 @@ public record LeadResponse(
                 lead.getPhone(),
                 lead.getObjectType(),
                 lead.getSource().name(),
-                lead.getStage().code()
+                lead.getStage().code(),
+                telegram
         );
     }
 }

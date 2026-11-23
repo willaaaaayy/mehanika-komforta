@@ -4,6 +4,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -12,10 +13,12 @@ import org.springframework.web.context.WebApplicationContext;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -189,6 +192,124 @@ class LeadScenariosTest {
                 .andExpect(status().isNoContent());
         mvc.perform(get("/api/leads").session(loggedIn))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void botPhotoIsPrivateToTheOwner() throws Exception {
+        MockMvc mvc = mvc();
+        MvcResult created = mvc.perform(post("/api/leads")
+                        .header("X-Lead-Token", "test-lead-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"С фото","phone":"79001112255","objectType":"Офис","source":"telegram"}
+                                """))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String leadId = created.getResponse().getContentAsString().replaceAll(".*\"id\":(\\d+).*", "$1");
+        byte[] jpeg = new byte[] {(byte) 0xff, (byte) 0xd8, (byte) 0xff, (byte) 0xd9};
+        MockMultipartFile photo = new MockMultipartFile("file", "photo.jpg", "image/jpeg", jpeg);
+
+        mvc.perform(multipart("/api/leads/" + leadId + "/photos").file(photo))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("token"));
+        mvc.perform(multipart("/api/leads/" + leadId + "/photos").file(photo).header("X-Lead-Token", "nope"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("token"));
+        mvc.perform(multipart("/api/leads/999999/photos").file(photo).header("X-Lead-Token", "test-lead-token"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.error").value("id"));
+        mvc.perform(multipart("/api/leads/" + leadId + "/photos")
+                        .file(new MockMultipartFile("file", "photo.png", "image/jpeg", jpeg))
+                        .header("X-Lead-Token", "test-lead-token"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("photo"));
+        mvc.perform(multipart("/api/leads/" + leadId + "/photos")
+                        .file(new MockMultipartFile("file", "photo.jpg", "image/jpeg", new byte[0]))
+                        .header("X-Lead-Token", "test-lead-token"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("photo"));
+
+        MvcResult stored = mvc.perform(multipart("/api/leads/" + leadId + "/photos")
+                        .file(photo)
+                        .header("X-Lead-Token", "test-lead-token"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").isNumber())
+                .andReturn();
+        String photoId = stored.getResponse().getContentAsString().replaceAll(".*\"id\":(\\d+).*", "$1");
+
+        mvc.perform(get("/api/leads/" + leadId + "/photos/" + photoId))
+                .andExpect(status().isUnauthorized());
+
+        MvcResult login = mvc.perform(post("/api/session")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"password\":\"test-admin-secret\"}"))
+                .andExpect(status().isNoContent())
+                .andReturn();
+        mvc.perform(get("/api/leads/" + leadId + "/photos").session(session(login)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(Integer.parseInt(photoId)));
+        mvc.perform(get("/api/leads/" + leadId + "/photos/" + photoId).session(session(login)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("image/jpeg"))
+                .andExpect(content().bytes(jpeg));
+
+        for (int i = 0; i < 9; i++) {
+            mvc.perform(multipart("/api/leads/" + leadId + "/photos").file(photo).header("X-Lead-Token", "test-lead-token"))
+                    .andExpect(status().isCreated());
+        }
+        mvc.perform(multipart("/api/leads/" + leadId + "/photos").file(photo).header("X-Lead-Token", "test-lead-token"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.error").value("photo"));
+    }
+
+    @Test
+    void oldLeadBodyStillWorksAndTelegramStaysBesideIt() throws Exception {
+        MockMvc mvc = mvc();
+        mvc.perform(post("/api/leads")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Без аккаунта","phone":"79001112266","objectType":"Офис","source":"site"}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.name").value("Без аккаунта"))
+                .andExpect(jsonPath("$.telegram").doesNotExist());
+
+        MvcResult created = mvc.perform(post("/api/leads")
+                        .header("X-Lead-Token", "test-lead-token")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Из диалога","phone":"79001112277","objectType":"Квартира","source":"telegram","telegram":{"id":123456789,"username":"","firstName":"Анна","lastName":"","bio":""}}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.name").value("Из диалога"))
+                .andExpect(jsonPath("$.telegram.id").value(123456789))
+                .andExpect(jsonPath("$.telegram.username").value(""))
+                .andExpect(jsonPath("$.telegram.photo").value(false))
+                .andReturn();
+        String leadId = created.getResponse().getContentAsString().replaceFirst(".*?\"id\":(\\d+).*", "$1");
+        byte[] jpeg = new byte[] {(byte) 0xff, (byte) 0xd8, (byte) 0xff, (byte) 0xd9};
+        MockMultipartFile portrait = new MockMultipartFile("file", "portrait.jpg", "image/jpeg", jpeg);
+        mvc.perform(multipart("/api/leads/" + leadId + "/telegram-photo").file(portrait))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("token"));
+        mvc.perform(multipart("/api/leads/" + leadId + "/telegram-photo").file(portrait).header("X-Lead-Token", "test-lead-token"))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").isNumber());
+        mvc.perform(get("/api/leads/" + leadId + "/telegram-photo"))
+                .andExpect(status().isUnauthorized());
+        MvcResult login = mvc.perform(post("/api/session")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"password\":\"test-admin-secret\"}"))
+                .andExpect(status().isNoContent())
+                .andReturn();
+        mvc.perform(get("/api/leads").session(session(login)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.name=='Из диалога')].telegram.photo").value(true));
+        mvc.perform(get("/api/leads/" + leadId + "/telegram-photo").session(session(login)))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType("image/jpeg"));
     }
 
     private static MockHttpSession session(MvcResult result) {

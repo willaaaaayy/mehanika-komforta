@@ -20,10 +20,12 @@ import java.util.List;
 public class LeadController {
 
     private final LeadRepository leads;
+    private final LeadProfileRepository profiles;
     private final CrmProperties properties;
 
-    public LeadController(LeadRepository leads, CrmProperties properties) {
+    public LeadController(LeadRepository leads, LeadProfileRepository profiles, CrmProperties properties) {
         this.leads = leads;
+        this.profiles = profiles;
         this.properties = properties;
     }
 
@@ -43,20 +45,30 @@ public class LeadController {
         if (source == LeadSource.manual && !AdminGuard.signedIn()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ApiError("auth"));
         }
-        LeadEntity saved = leads.save(new LeadEntity(
+        LeadEntity lead = new LeadEntity(
                 Instant.now(),
                 LeadRules.name(request),
                 LeadRules.phone(request),
                 LeadRules.objectType(request),
                 source
-        ));
-        return ResponseEntity.status(HttpStatus.CREATED).body(LeadResponse.from(saved));
+        );
+        if (request.telegram() != null) {
+            lead.telegram(
+                    request.telegram().id(),
+                    LeadRules.username(request.telegram()),
+                    LeadRules.firstName(request.telegram()),
+                    LeadRules.lastName(request.telegram()),
+                    LeadRules.bio(request.telegram())
+            );
+        }
+        LeadEntity saved = leads.save(lead);
+        return ResponseEntity.status(HttpStatus.CREATED).body(view(saved));
     }
 
     @GetMapping("/api/leads")
     public ResponseEntity<List<LeadResponse>> list() {
         List<LeadResponse> body = leads.findAllByOrderByCreatedAtDesc().stream()
-                .map(LeadResponse::from)
+                .map(this::view)
                 .toList();
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(body);
     }
@@ -73,6 +85,10 @@ public class LeadController {
         }
         LeadEntity lead = found.get();
         lead.changeStage(stage, Instant.now());
-        return ResponseEntity.ok(LeadResponse.from(leads.save(lead)));
+        return ResponseEntity.ok(view(leads.save(lead)));
+    }
+
+    private LeadResponse view(LeadEntity lead) {
+        return LeadResponse.from(lead, profiles.existsByLeadId(lead.getId()));
     }
 }
