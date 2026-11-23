@@ -11,6 +11,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -47,20 +48,49 @@ public class CrmForwarder implements CrmLeadSink {
 
     @Override
     public CrmLeadSink.Result forward(String name, String phone, String objectType) {
+        return postLead(name, phone, objectType, null).result();
+    }
+
+    @Override
+    public CrmLeadSink.Result deliver(String name, String phone, String objectType, TelegramProfile profile, List<LeadPhoto> photos) {
+        Posted posted = postLead(name, phone, objectType, profile);
+        if (posted.result() != CrmLeadSink.Result.SENT || posted.id() < 0) {
+            return posted.result();
+        }
+        if (photos != null) {
+            for (LeadPhoto photo : photos) {
+                upload(posted.id(), "/photos", photo);
+            }
+        }
+        if (profile != null) {
+            upload(posted.id(), "/telegram-photo", profile.photo());
+        }
+        return CrmLeadSink.Result.SENT;
+    }
+
+    private Posted postLead(String name, String phone, String objectType, TelegramProfile profile) {
         if (url.isBlank() || token.isBlank()) {
-            return CrmLeadSink.Result.UNAVAILABLE;
+            return new Posted(CrmLeadSink.Result.UNAVAILABLE, -1);
         }
         String cleanName = name == null ? "" : name.strip();
         String cleanPhone = phone == null ? "" : phone.strip();
         String cleanObject = objectType == null ? "" : objectType.strip();
         if (cleanName.length() < 2 || cleanPhone.isBlank() || cleanObject.length() < 2) {
-            return CrmLeadSink.Result.REJECTED;
+            return new Posted(CrmLeadSink.Result.REJECTED, -1);
         }
         ObjectNode body = Jsons.MAPPER.createObjectNode();
         body.put("name", cleanName);
         body.put("phone", cleanPhone);
         body.put("objectType", cleanObject);
         body.put("source", "telegram");
+        if (profile != null) {
+            ObjectNode telegram = body.putObject("telegram");
+            telegram.put("id", profile.id());
+            telegram.put("username", username(profile.username()));
+            telegram.put("firstName", clip(profile.firstName(), 64));
+            telegram.put("lastName", clip(profile.lastName(), 64));
+            telegram.put("bio", clip(profile.bio(), 70));
+        }
         try {
             HttpRequest request = HttpRequest.newBuilder(URI.create(url))
                     .timeout(Duration.ofSeconds(3))
@@ -71,23 +101,89 @@ public class CrmForwarder implements CrmLeadSink {
             HttpResponse<String> response = http.send(request, HttpResponse.BodyHandlers.ofString());
             int status = response.statusCode();
             if (status >= 200 && status < 300) {
+                long id = -1;
+                try {
+                    id = Jsons.MAPPER.readTree(response.body()).path("id").asLong(-1);
+                } catch (RuntimeException ignored) {
+                    id = -1;
+                }
                 log.info("crm lead forwarded");
-                return CrmLeadSink.Result.SENT;
+                return new Posted(CrmLeadSink.Result.SENT, id);
             }
             if (status >= 400 && status < 500) {
                 log.warn("crm forward rejected (http {})", status);
-                return CrmLeadSink.Result.REJECTED;
+                return new Posted(CrmLeadSink.Result.REJECTED, -1);
             }
             log.warn("crm forward unavailable (http {})", status);
-            return CrmLeadSink.Result.UNAVAILABLE;
+            return new Posted(CrmLeadSink.Result.UNAVAILABLE, -1);
         } catch (InterruptedException ex) {
             Thread.currentThread().interrupt();
             log.warn("crm forward unavailable ({})", ex.getClass().getSimpleName());
-            return CrmLeadSink.Result.UNAVAILABLE;
+            return new Posted(CrmLeadSink.Result.UNAVAILABLE, -1);
         } catch (Exception ex) {
             log.warn("crm forward unavailable ({})", ex.getClass().getSimpleName());
-            return CrmLeadSink.Result.UNAVAILABLE;
+            return new Posted(CrmLeadSink.Result.UNAVAILABLE, -1);
         }
+    }
+
+    private void upload(long leadId, String suffix, LeadPhoto photo) {
+        if (photo == null || photo.bytes() == null || photo.bytes().length == 0 || photo.bytes().length > LeadPhoto.MAX_BYTES) {
+            return;
+        }
+        String type = LeadPhoto.sniff(photo.bytes());
+        if (type == null) {
+            return;
+        }
+        String boundary = "----Mehanika" + Long.toHexString(System.nanoTime());
+        byte[] head = ("--" + boundary + "\r\n"
+                + "Content-Disposition: form-data; name=\"file\"; filename=\"" + LeadPhoto.filename(type) + "\"\r\n"
+                + "Content-Type: " + type + "\r\n\r\n").getBytes(StandardCharsets.UTF_8);
+        byte[] tail = ("\r\n--" + boundary + "--\r\n").getBytes(StandardCharsets.UTF_8);
+        byte[] body = new byte[head.length + photo.bytes().length + tail.length];
+        System.arraycopy(head, 0, body, 0, head.length);
+        System.arraycopy(photo.bytes(), 0, body, head.length, photo.bytes().length);
+        System.arraycopy(tail, 0, body, head.length + photo.bytes().length, tail.length);
+        try {
+            HttpRequest request = HttpRequest.newBuilder(URI.create(url + "/" + leadId + suffix))
+                    .timeout(Duration.ofSeconds(20))
+                    .header("Content-Type", "multipart/form-data; boundary=" + boundary)
+                    .header("X-Lead-Token", token)
+                    .POST(HttpRequest.BodyPublishers.ofByteArray(body))
+                    .build();
+            HttpResponse<Void> response = http.send(request, HttpResponse.BodyHandlers.discarding());
+            int status = response.statusCode();
+            if (status < 200 || status >= 300) {
+                log.warn("crm photo failed (http {})", status);
+            }
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+            log.warn("crm photo failed ({})", ex.getClass().getSimpleName());
+        } catch (Exception ex) {
+            log.warn("crm photo failed ({})", ex.getClass().getSimpleName());
+        }
+    }
+
+    private static String username(String value) {
+        String cleaned = clip(value, 33);
+        if (cleaned.startsWith("@")) {
+            cleaned = cleaned.substring(1).strip();
+        }
+        return clip(cleaned, 32);
+    }
+
+    private static String clip(String value, int max) {
+        String cleaned = value == null ? "" : value.strip();
+        if (cleaned.length() <= max) {
+            return cleaned;
+        }
+        int end = max;
+        if (Character.isHighSurrogate(cleaned.charAt(end - 1))) {
+            end--;
+        }
+        return cleaned.substring(0, Math.max(0, end));
+    }
+
+    private record Posted(CrmLeadSink.Result result, long id) {
     }
 
     @Override

@@ -22,6 +22,8 @@ import com.mehanika.bot.catalog.PriceCatalog;
 import com.mehanika.bot.dialog.Dialog;
 import com.mehanika.bot.dialog.InCallback;
 import com.mehanika.bot.dialog.InMessage;
+import com.mehanika.bot.dialog.ObjectPhoto;
+import com.mehanika.bot.lead.LeadPhoto;
 import com.mehanika.bot.lead.CrmLeadSink;
 import com.mehanika.bot.lead.LeadStore;
 import com.mehanika.bot.telegram.Out;
@@ -194,6 +196,7 @@ class AcceptanceTest {
         outs.clear();
         String phone = "+7 (900) 000-00-00";
         outs.addAll(dialog.onMessage(msg(phone)));
+        outs.addAll(dialog.onCallback(cb("ph:done")));
         assertTrue(text(outs).contains("Телефон: " + phone));
         outs.clear();
         outs.addAll(dialog.onCallback(cb("ok:1")));
@@ -203,6 +206,22 @@ class AcceptanceTest {
         assertTrue(Files.readString(file).contains(phone));
         assertEquals(1, Files.readAllLines(file).size());
         assertTrue(dialog.onCallback(cb("ok:1")).isEmpty());
+    }
+
+    @Test
+    void photosComeAfterThePhoneAndStayOptional() {
+        Dialog dialog = dialog(new LeadStore(Path.of("target", "unused-leads.jsonl")), null);
+        driveSample(dialog, new ArrayList<>());
+        dialog.onMessage(msg("Иван"));
+        String asked = text(dialog.onMessage(msg("9000000000")));
+        assertTrue(asked.contains("Если есть фото объекта"));
+        assertTrue(text(dialog.onMessage(msg("нет"))).contains("Нужно фото. Или нажмите «Дальше»."));
+        byte[] jpeg = new byte[] {(byte) 0xff, (byte) 0xd8, (byte) 0xff, 0};
+        for (int i = 0; i < 10; i++) {
+            assertTrue(dialog.onObjectPhoto(42, ObjectPhoto.ok(new LeadPhoto("image/jpeg", jpeg))).isEmpty());
+        }
+        assertTrue(text(dialog.onObjectPhoto(42, ObjectPhoto.tooBig())).contains("Можно не больше 10 фото"));
+        assertTrue(text(dialog.onCallback(cb("ph:done"))).contains("Телефон: 9000000000"));
     }
 
     @Test
@@ -217,6 +236,7 @@ class AcceptanceTest {
         driveSample(dialog, new ArrayList<>());
         dialog.onMessage(msg("Иван"));
         dialog.onMessage(msg("+7 (900) 000-00-00"));
+        dialog.onCallback(cb("ph:done"));
         String reply = text(dialog.onCallback(cb("ok:1")));
         assertTrue(reply.contains("Заявку записал."));
         assertEquals(List.of("Иван|+7 (900) 000-00-00|Квартира"), objects);
@@ -234,6 +254,7 @@ class AcceptanceTest {
         driveSample(dialog, new ArrayList<>());
         dialog.onMessage(msg("Иван"));
         dialog.onMessage(msg("9000000000"));
+        dialog.onCallback(cb("ph:done"));
         List<Out> outs = dialog.onCallback(cb("ok:1"));
         assertTrue(outs.stream().anyMatch(out -> out instanceof Out.Toast toast
                 && "Не удалось записать заявку, попробуйте ещё раз".equals(toast.text())));

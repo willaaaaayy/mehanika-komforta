@@ -15,8 +15,11 @@ import com.mehanika.bot.BotSettings;
 import com.mehanika.bot.calc.Estimator;
 import com.mehanika.bot.catalog.CatalogRepository;
 import com.mehanika.bot.catalog.PriceCatalog;
+import com.mehanika.bot.lead.AccountLookup;
 import com.mehanika.bot.lead.CrmLeadSink;
+import com.mehanika.bot.lead.LeadPhoto;
 import com.mehanika.bot.lead.LeadStore;
+import com.mehanika.bot.lead.TelegramProfile;
 import com.mehanika.bot.telegram.Keyboard;
 import com.mehanika.bot.telegram.Out;
 
@@ -40,23 +43,29 @@ public class Dialog {
     private final LeadStore leads;
     private final Long adminChatId;
     private final CrmLeadSink crm;
+    private final AccountLookup accounts;
     private final Map<Long, Session> sessions = new ConcurrentHashMap<>();
     private final Map<Long, Object> locks = new ConcurrentHashMap<>();
 
     @Autowired
-    public Dialog(CatalogRepository catalogs, LeadStore leads, BotSettings settings, CrmLeadSink crm) {
-        this(catalogs, leads, settings.adminChatId(), crm);
+    public Dialog(CatalogRepository catalogs, LeadStore leads, BotSettings settings, CrmLeadSink crm, AccountLookup accounts) {
+        this(catalogs, leads, settings.adminChatId(), crm, accounts);
     }
 
     public Dialog(CatalogRepository catalogs, LeadStore leads, Long adminChatId) {
-        this(catalogs, leads, adminChatId, (name, phone, objectType) -> CrmLeadSink.Result.SENT);
+        this(catalogs, leads, adminChatId, (name, phone, objectType) -> CrmLeadSink.Result.SENT, Dialog::plainAccount);
     }
 
     public Dialog(CatalogRepository catalogs, LeadStore leads, Long adminChatId, CrmLeadSink crm) {
+        this(catalogs, leads, adminChatId, crm, Dialog::plainAccount);
+    }
+
+    public Dialog(CatalogRepository catalogs, LeadStore leads, Long adminChatId, CrmLeadSink crm, AccountLookup accounts) {
         this.catalogs = catalogs;
         this.leads = leads;
         this.adminChatId = adminChatId;
         this.crm = crm;
+        this.accounts = accounts;
     }
 
     public List<Out> onMessage(InMessage message) {
@@ -85,6 +94,7 @@ public class Dialog {
                 case COMPLEX_TEXT -> onComplexText(session, message.text());
                 case NAME -> onName(session, message.text());
                 case PHONE -> onPhone(session, message.text());
+                case PHOTOS -> List.of(send(session.chatId, "Нужно фото. Или нажмите «Дальше».", null));
                 case NONE -> List.of(send(session.chatId, IDLE, null));
                 default -> List.of(send(session.chatId, NEED, null));
             };
@@ -122,6 +132,7 @@ public class Dialog {
                 case CHASE -> onChase(session, query);
                 case HEIGHT -> onHeight(session, query);
                 case COMPLEX_PICK -> onComplex(session, query);
+                case PHOTOS -> onPhotosDone(session, query);
                 case CONFIRM -> onConfirm(session, query);
                 default -> List.of();
             };
@@ -492,7 +503,67 @@ public class Dialog {
             return List.of(send(session.chatId, "Нужен телефон: не меньше 10 цифр.", null));
         }
         session.phone = phone;
-        session.card = session.estimateText + "\n\nКонтакт: " + session.name + "\nТелефон: " + phone;
+        session.photos.clear();
+        session.step = Step.PHOTOS;
+        return List.of(send(session.chatId,
+                "Если есть фото объекта, пришлите их. Когда закончите, нажмите «Дальше». Можно без фото.",
+                Keyboard.of(List.of(new Keyboard.Button("Дальше", "ph:done")))));
+    }
+
+    public List<Out> onObjectPhoto(long chatId, ObjectPhoto photo) {
+        synchronized (lock(chatId)) {
+            Session session = sessions.get(chatId);
+            if (session == null || session.step == Step.NONE) {
+                return List.of(send(chatId, IDLE, null));
+            }
+            if (session.step != Step.PHOTOS) {
+                return List.of(send(chatId, NEED, null));
+            }
+            if (photo == null || photo.kind() == ObjectPhoto.Kind.NOT_IMAGE) {
+                return List.of(send(chatId, "Нужно фото. Или нажмите «Дальше».", null));
+            }
+            if (photo.kind() == ObjectPhoto.Kind.TOO_BIG || session.photos.size() >= 10) {
+                return List.of(send(chatId, "Можно не больше 10 фото, каждое до 10 МБ.", null));
+            }
+            LeadPhoto file = photo.photo();
+            if (file == null || file.bytes() == null || file.bytes().length == 0 || file.bytes().length > LeadPhoto.MAX_BYTES
+                    || LeadPhoto.sniff(file.bytes()) == null) {
+                return List.of(send(chatId, "Нужно фото. Или нажмите «Дальше».", null));
+            }
+            session.photos.add(new LeadPhoto(LeadPhoto.sniff(file.bytes()), file.bytes()));
+            return List.of();
+        }
+    }
+
+    public void noteUser(long chatId, long userId, String username, String firstName, String lastName) {
+        synchronized (lock(chatId)) {
+            Session session = sessions.get(chatId);
+            if (session == null) {
+                return;
+            }
+            session.remember(userId, username);
+            if (firstName != null) {
+                session.firstName = firstName;
+            }
+            if (lastName != null) {
+                session.lastName = lastName;
+            }
+        }
+    }
+
+    private List<Out> onPhotosDone(Session session, InCallback query) {
+        if (!"ph:done".equals(query.data())) {
+            return List.of();
+        }
+        List<Out> outs = new ArrayList<>();
+        outs.add(toast(query, null));
+        outs.add(clear(query));
+        outs.addAll(showCard(session));
+        return outs;
+    }
+
+    private List<Out> showCard(Session session) {
+        session.card = session.estimateText + "\n\nКонтакт: " + session.name + "\nТелефон: " + session.phone;
         session.step = Step.CONFIRM;
         List<Out> outs = new ArrayList<>();
         for (String part : Texts.pre(session.card)) {
@@ -522,7 +593,9 @@ public class Dialog {
             session.submitted = false;
             return List.of(toast(query, "Не удалось записать заявку, попробуйте ещё раз"));
         }
-        CrmLeadSink.Result forwarded = crm.forward(session.name, session.phone, objectLabel(session.objectType));
+        TelegramProfile profile = accounts.load(session.userId, session.username, session.firstName, session.lastName);
+        CrmLeadSink.Result forwarded = crm.deliver(
+                session.name, session.phone, objectLabel(session.objectType), profile, List.copyOf(session.photos));
         if (forwarded != CrmLeadSink.Result.UNAVAILABLE) {
             crm.remember(createdAt);
         }
@@ -699,6 +772,10 @@ public class Dialog {
         return label == null || label.isBlank() ? key : label;
     }
 
+    private static TelegramProfile plainAccount(long userId, String username, String firstName, String lastName) {
+        return new TelegramProfile(userId, username, firstName, lastName, "", null);
+    }
+
     private static int n(Integer value) {
         return value == null ? 0 : value;
     }
@@ -706,7 +783,7 @@ public class Dialog {
     private enum Step {
         NONE, SECTION, OBJECT, CONDITION, CITY, GRADE, AREA, FINISH_MODE, WORKS,
         ELECTRO, ELECTRO_N, WATER, WATER_N, CAMERAS, CAMERAS_N, LAN, LAN_N,
-        CHASE, HEIGHT, COMPLEX_PICK, COMPLEX_TEXT, NAME, PHONE, CONFIRM
+        CHASE, HEIGHT, COMPLEX_PICK, COMPLEX_TEXT, NAME, PHONE, PHOTOS, CONFIRM
     }
 
     private static final class Session {
@@ -715,6 +792,9 @@ public class Dialog {
         Step step = Step.NONE;
         long userId;
         String username;
+        String firstName;
+        String lastName;
+        final List<LeadPhoto> photos = new ArrayList<>();
         String clientId;
         String section;
         String objectType;

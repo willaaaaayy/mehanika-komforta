@@ -19,6 +19,8 @@ import com.mehanika.bot.catalog.CatalogRepository;
 import com.mehanika.bot.dialog.Dialog;
 import com.mehanika.bot.lead.CrmForwarder;
 import com.mehanika.bot.lead.CrmLeadSink;
+import com.mehanika.bot.lead.LeadPhoto;
+import com.mehanika.bot.lead.TelegramProfile;
 import com.mehanika.bot.lead.LeadStore;
 import com.sun.net.httpserver.HttpServer;
 
@@ -53,6 +55,44 @@ class CrmForwarderTest {
     }
 
     @Test
+    void deliverPostsAccountAndBothPhotoSlots() throws IOException {
+        List<String> paths = new ArrayList<>();
+        List<String> types = new ArrayList<>();
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        server.createContext("/api/leads", exchange -> {
+            String path = exchange.getRequestURI().getPath();
+            paths.add(path);
+            byte[] request = exchange.getRequestBody().readAllBytes();
+            if (path.endsWith("/photos") || path.endsWith("/telegram-photo")) {
+                String payload = new String(request, StandardCharsets.ISO_8859_1);
+                types.add(payload.contains("filename=\"photo.jpg\"") ? "photo.jpg" : "other");
+            } else {
+                String json = new String(request, StandardCharsets.UTF_8);
+                types.add(json.contains("\"username\":\"anna\"") && json.contains("\"firstName\":\"Анна\"") ? "account" : "lead");
+            }
+            byte[] ok = "{\"id\":7}".getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(201, ok.length);
+            try (OutputStream out = exchange.getResponseBody()) {
+                out.write(ok);
+            }
+        });
+        server.start();
+        try {
+            String url = "http://127.0.0.1:" + server.getAddress().getPort() + "/api/leads";
+            CrmForwarder forwarder = new CrmForwarder(url, "test-lead-token", Files.createTempFile("crm", ".crm"));
+            byte[] jpeg = new byte[] {(byte) 0xff, (byte) 0xd8, (byte) 0xff, 1, 2, 3};
+            assertEquals(CrmLeadSink.Result.SENT, forwarder.deliver(
+                    "Анна", "9000000000", "Квартира",
+                    new TelegramProfile(42, "anna", "Анна", "", "коротко", new LeadPhoto("image/jpeg", jpeg)),
+                    List.of(new LeadPhoto("image/jpeg", jpeg))));
+            assertEquals(List.of("/api/leads", "/api/leads/7/photos", "/api/leads/7/telegram-photo"), paths);
+            assertEquals(List.of("account", "photo.jpg", "photo.jpg"), types);
+        } finally {
+            server.stop(0);
+        }
+    }
+
+    @Test
     void crmOutageDoesNotCancelTheClientReply() throws IOException {
         AtomicInteger calls = new AtomicInteger();
         HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
@@ -81,6 +121,7 @@ class CrmForwarderTest {
             dialog.onCallback(new com.mehanika.bot.dialog.InCallback(42, 1, 42, "tester", "cb", "fm:paint"));
             dialog.onMessage(new com.mehanika.bot.dialog.InMessage(42, 1, 42, "tester", "Иван"));
             dialog.onMessage(new com.mehanika.bot.dialog.InMessage(42, 1, 42, "tester", "9000000000"));
+            dialog.onCallback(new com.mehanika.bot.dialog.InCallback(42, 1, 42, "tester", "cb", "ph:done"));
             String reply = dialog.onCallback(new com.mehanika.bot.dialog.InCallback(42, 1, 42, "tester", "cb", "ok:1"))
                     .stream()
                     .filter(out -> out instanceof com.mehanika.bot.telegram.Out.Send)
