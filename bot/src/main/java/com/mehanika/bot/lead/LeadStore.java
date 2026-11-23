@@ -13,6 +13,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.mehanika.bot.BotSettings;
@@ -25,6 +26,7 @@ public class LeadStore {
     private final Path path;
     private final Object lock = new Object();
 
+    @Autowired
     public LeadStore(BotSettings settings) {
         this(Path.of(settings.leadsPath()));
     }

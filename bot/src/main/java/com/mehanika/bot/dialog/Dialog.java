@@ -8,6 +8,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.mehanika.bot.BotSettings;
@@ -40,6 +41,7 @@ public class Dialog {
     private final Map<Long, Session> sessions = new ConcurrentHashMap<>();
     private final Map<Long, Object> locks = new ConcurrentHashMap<>();
 
+    @Autowired
     public Dialog(CatalogRepository catalogs, LeadStore leads, BotSettings settings) {
         this(catalogs, leads, settings.adminChatId());
     }
