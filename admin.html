@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f3ee">
+  <title>Вход администратора — Механика Комфорта</title>
+  <meta name="description" content="Вход администратора Механики Комфорта. Здесь будет CRM.">
+  <link rel="stylesheet" href="site.css">
+</head>
+<body>
+  <a class="skip" href="#main">К содержанию</a>
+  <header class="rail">
+    <a class="logo" href="index.html">Механика Комфорта</a>
+    <nav aria-label="Разделы">
+      <a href="index.html#work">Работы</a>
+      <a href="index.html#cases">Объекты</a>
+      <a href="index.html#why">Подход</a>
+      <a href="index.html#request">Заявка</a>
+    </nav>
+    <a class="login" href="admin.html" aria-current="page">Вход</a>
+  </header>
+  <main class="page" id="main">
+    <section class="door" aria-labelledby="admin-title">
+      <p class="kicker">Администратор</p>
+      <h1 id="admin-title">Вход</h1>
+      <p class="lead">Здесь будет CRM.</p>
+      <form id="admin-login">
+        <div class="field">
+          <label for="login">Логин</label>
+          <input id="login" name="login" type="text" autocomplete="username" required maxlength="80">
+        </div>
+        <div class="field">
+          <label for="password">Пароль</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" required maxlength="80">
+        </div>
+        <button type="submit">Войти</button>
+        <p class="form-note" id="admin-note">Вход не подключён: логин и пароль никуда не отправляются.</p>
+      </form>
+    </section>
+  </main>
+  <footer class="foot">
+    <p>Механика Комфорта</p>
+    <p><a href="index.html">На сайт</a></p>
+  </footer>
+  <script>
+    document.getElementById("admin-login").addEventListener("submit", function (event) {
+      event.preventDefault();
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f3ee">
+  <title>Механика Комфорта — коммерческая отделка</title>
+  <meta name="description" content="Механика Комфорта: отделка коммерческих помещений, общестроительные работы, спецмонтаж, поставка черновых материалов и помощь с выбором чистовых материалов. Фиксированная цена в договоре, гарантия 2 года.">
+  <link rel="stylesheet" href="site.css">
+</head>
+<body>
+  <a class="skip" href="#main">К содержанию</a>
+  <header class="rail">
+    <a class="logo" href="index.html">Механика Комфорта</a>
+    <nav aria-label="Разделы">
+      <a href="#work">Работы</a>
+      <a href="#cases">Объекты</a>
+      <a href="#why">Подход</a>
+      <a href="#request">Заявка</a>
+    </nav>
+    <a class="login" href="admin.html">Вход</a>
+  </header>
+  <main class="page" id="main">
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="ring" aria-hidden="true"></div>
+      <p class="kicker">Коммерческие помещения</p>
+      <h1 id="hero-title">Отделка коммерческих помещений</h1>
+      <p class="index">001</p>
+      <p class="slogan">«Создавая комфорт — мы гарантируем качество!»</p>
+      <p class="offer">Общестроительные работы, спецмонтаж, поставка черновых материалов и помощь с выбором чистовых материалов.</p>
+      <ul class="trust">
+        <li>Фиксированная цена в договоре</li>
+        <li>Гарантия 2&nbsp;года</li>
+        <li>Наличные и безналичный перевод</li>
+        <li>Поэтапный контроль</li>
+      </ul>
+    </section>
+
+    <section id="work" aria-labelledby="work-title">
+      <h2 id="work-title">Что мы делаем</h2>
+      <ol class="works">
+        <li><span class="idx">01</span><h3>Отделка коммерческих помещений</h3></li>
+        <li><span class="idx">02</span><h3>Общестроительные работы</h3></li>
+        <li><span class="idx">03</span><h3>Спецмонтаж</h3></li>
+        <li><span class="idx">04</span><h3>Поставка черновых материалов</h3></li>
+        <li><span class="idx">05</span><h3>Помощь с выбором чистовых материалов</h3></li>
+      </ol>
+    </section>
+
+    <section id="cases" aria-labelledby="cases-title">
+      <h2 id="cases-title">Объекты</h2>
+      <div class="case-row">
+        <article>
+          <p class="kicker">Клиника</p>
+          <h3>Стоматологическая клиника</h3>
+          <p class="case-note">Генподряд от демонтажа до инженерии</p>
+          <p class="fact">1024&nbsp;м²</p>
+        </article>
+        <article>
+          <p class="kicker">Кофейни</p>
+          <h3>Кофе Лайк</h3>
+          <p class="fact">Сеть кофеен</p>
+        </article>
+      </div>
+      <p class="range">От автомоек до кофеен.</p>
+    </section>
+
+    <section id="why" aria-labelledby="why-title">
+      <h2 id="why-title">Почему мы</h2>
+      <ul class="why-list">
+        <li>Фиксированная цена в договоре</li>
+        <li>Гарантия 2&nbsp;года</li>
+        <li>Наличные и безналичный перевод</li>
+        <li>Поэтапный контроль</li>
+      </ul>
+    </section>
+
+    <section id="request" aria-labelledby="request-title">
+      <h2 id="request-title">Заявка</h2>
+      <p class="lead">Имя, телефон и тип объекта.</p>
+      <form id="lead">
+        <div class="field">
+          <label for="name">Имя</label>
+          <input id="name" name="name" type="text" autocomplete="name" required maxlength="80">
+        </div>
+        <div class="field">
+          <label for="phone">Телефон</label>
+          <input id="phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" required maxlength="20" spellcheck="false">
+        </div>
+        <div class="field">
+          <label for="object-type">Тип объекта</label>
+          <input id="object-type" name="object-type" type="text" required maxlength="80" placeholder="Автомойка, кофейня или клиника">
+        </div>
+        <button type="submit">Оставить заявку</button>
+        <p class="form-note" id="form-note">Эскиз страницы: заявка никуда не отправляется.</p>
+      </form>
+    </section>
+  </main>
+  <footer class="foot">
+    <p>Механика Комфорта. «Создавая комфорт — мы гарантируем качество!»</p>
+    <p><a href="admin.html">Вход администратора</a></p>
+  </footer>
+  <script>
+    document.getElementById("lead").addEventListener("submit", function (event) {
+      event.preventDefault();
+    });
+  </script>
+</body>
+</html>
