@@ -3,42 +3,44 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#f6f3ee">
+  <meta name="theme-color" content="#ffffff">
   <title>Механика Комфорта — коммерческая отделка</title>
-  <link rel="icon" href="logo.jpg" type="image/jpeg">
   <meta name="description" content="Механика Комфорта: отделка коммерческих помещений, общестроительные работы, спецмонтаж, поставка черновых материалов и помощь с выбором чистовых материалов. Фиксированная цена в договоре, гарантия 2 года.">
-  <link rel="stylesheet" href="site.css">
+  <link rel="icon" href="logo.jpg" type="image/jpeg">
+  <link rel="stylesheet" href="css/app.css">
 </head>
 <body>
   <a class="skip" href="#main">К содержанию</a>
-  <header class="rail">
-    <a class="logo" href="index.html"><img src="logo.jpg" alt="Механика Комфорта"></a>
-    <nav aria-label="Разделы">
+  <header class="top">
+    <a class="brand" href="index.html">
+      <img src="logo.jpg" alt="" width="96" height="96">
+      <span>Механика Комфорта</span>
+    </a>
+    <button class="btn btn-ghost menu" type="button" id="menu" aria-expanded="false" aria-controls="site-nav">Меню</button>
+    <nav id="site-nav" aria-label="Разделы">
       <a href="#work">Работы</a>
       <a href="#cases">Объекты</a>
       <a href="#why">Подход</a>
       <a href="#request">Заявка</a>
     </nav>
-    <a class="login" href="admin.html">Вход</a>
+    <a class="login-link" href="login.html">Вход</a>
   </header>
-  <main class="page" id="main">
+  <main class="wrap" id="main">
     <section class="hero" aria-labelledby="hero-title">
-      <div class="ring" aria-hidden="true"></div>
       <img class="hero-mark" src="logo.jpg" alt="">
       <p class="kicker">Коммерческие помещения</p>
       <h1 id="hero-title">Отделка коммерческих помещений</h1>
-      <p class="index">001</p>
       <p class="slogan">«Создавая комфорт — мы гарантируем качество!»</p>
       <p class="offer">Общестроительные работы, спецмонтаж, поставка черновых материалов и помощь с выбором чистовых материалов.</p>
       <ul class="trust">
         <li>Фиксированная цена в договоре</li>
-        <li>Гарантия 2&nbsp;года</li>
+        <li>Гарантия 2 года</li>
         <li>Наличные и безналичный перевод</li>
         <li>Поэтапный контроль</li>
       </ul>
     </section>
 
-    <section id="work" aria-labelledby="work-title">
+    <section class="section" id="work" aria-labelledby="work-title">
       <h2 id="work-title">Что мы делаем</h2>
       <ol class="works">
         <li><span class="idx">01</span><h3>Отделка коммерческих помещений</h3></li>
@@ -49,88 +51,63 @@
       </ol>
     </section>
 
-    <section id="cases" aria-labelledby="cases-title">
+    <section class="section" id="cases" aria-labelledby="cases-title">
       <h2 id="cases-title">Объекты</h2>
       <div class="case-row">
-        <article>
+        <article class="case">
           <p class="kicker">Клиника</p>
           <h3>Стоматологическая клиника</h3>
-          <p class="case-note">Генподряд от демонтажа до инженерии</p>
-          <p class="fact">1024&nbsp;м²</p>
+          <p class="muted">Генподряд от демонтажа до инженерии</p>
+          <p class="fact">1024 м²</p>
         </article>
-        <article>
+        <article class="case">
           <p class="kicker">Кофейни</p>
           <h3>Кофе Лайк</h3>
           <p class="fact">Сеть кофеен</p>
         </article>
       </div>
-      <p class="range">От автомоек до кофеен.</p>
+      <p class="lead">От автомоек до кофеен.</p>
     </section>
 
-    <section id="why" aria-labelledby="why-title">
+    <section class="section" id="why" aria-labelledby="why-title">
       <h2 id="why-title">Почему мы</h2>
       <ul class="why-list">
         <li>Фиксированная цена в договоре</li>
-        <li>Гарантия 2&nbsp;года</li>
+        <li>Гарантия 2 года</li>
         <li>Наличные и безналичный перевод</li>
         <li>Поэтапный контроль</li>
       </ul>
     </section>
 
-    <section id="request" aria-labelledby="request-title">
+    <section class="section" id="request" aria-labelledby="request-title">
       <h2 id="request-title">Заявка</h2>
       <p class="lead">Имя, телефон и тип объекта.</p>
-      <form id="lead">
+      <form id="lead" novalidate>
         <div class="field">
           <label for="name">Имя</label>
-          <input id="name" name="name" type="text" autocomplete="name" required maxlength="80">
+          <input id="name" name="name" type="text" autocomplete="name" maxlength="80" required>
+          <p class="field-error" id="name-error" hidden></p>
         </div>
         <div class="field">
           <label for="phone">Телефон</label>
-          <input id="phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" required maxlength="40" spellcheck="false">
+          <input id="phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" maxlength="40" required spellcheck="false">
+          <p class="field-error" id="phone-error" hidden></p>
         </div>
         <div class="field">
           <label for="object-type">Тип объекта</label>
-          <input id="object-type" name="object-type" type="text" required maxlength="80" placeholder="Автомойка, кофейня или клиника">
+          <input id="object-type" name="objectType" type="text" maxlength="80" required placeholder="Автомойка, кофейня или клиника">
+          <p class="field-error" id="object-type-error" hidden></p>
         </div>
-        <button type="submit">Оставить заявку</button>
-        <p class="form-note" id="form-note" role="status"></p>
+        <button class="btn btn-primary" type="submit">Оставить заявку</button>
+        <p class="note" id="form-note" role="status" hidden></p>
       </form>
     </section>
   </main>
   <footer class="foot">
     <p>Механика Комфорта. «Создавая комфорт — мы гарантируем качество!»</p>
-    <p><a href="admin.html">Вход администратора</a></p>
+    <p><a href="login.html">Вход</a></p>
   </footer>
-  <script>
-    document.getElementById("lead").addEventListener("submit", function (event) {
-      event.preventDefault();
-      var note = document.getElementById("form-note");
-      note.textContent = "";
-      fetch("/api/leads", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: document.getElementById("name").value,
-          phone: document.getElementById("phone").value,
-          objectType: document.getElementById("object-type").value,
-          source: "site"
-        })
-      }).then(function (response) {
-        if (response.status === 201) {
-          document.getElementById("lead").reset();
-          note.textContent = "Заявку записали.";
-          return;
-        }
-        return response.json().then(function (body) {
-          note.textContent = body.error === "phone"
-            ? "Нужен телефон из 10–15 цифр."
-            : "Проверьте имя, телефон и тип объекта.";
-        });
-      }).catch(function () {
-        note.textContent = "Не удалось записать заявку. Попробуйте ещё раз.";
-      });
-    });
-  </script>
+  <script type="module" src="js/landing.js"></script>
+  <noscript><p class="wrap">Чтобы отправить заявку, включите JavaScript.</p></noscript>
 </body>
 </html>

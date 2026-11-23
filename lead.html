@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <title>Заявка — Механика Комфорта</title>
+  <link rel="icon" href="logo.jpg" type="image/jpeg">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body class="has-save">
+  <a class="skip" href="#main">К содержанию</a>
+  <header class="bar">
+    <div class="brand">
+      <img src="logo.jpg" alt="" width="96" height="96">
+      <span>Механика Комфорта</span>
+    </div>
+    <nav aria-label="Разделы">
+      <a href="leads.html">Заявки</a>
+    </nav>
+    <button class="btn btn-ghost bar-end" type="button" id="logout">Выйти</button>
+  </header>
+  <main class="wrap" id="main">
+    <p class="banner" id="banner" role="alert" hidden></p>
+    <div class="skeleton" id="skeleton" aria-hidden="true">
+      <span></span><span></span><span></span>
+    </div>
+    <article id="card" hidden>
+      <header class="lead-bar">
+        <div>
+          <p class="kicker" id="card-kicker">Заявка</p>
+          <h1 id="card-title">Заявка</h1>
+          <p id="card-stage"></p>
+        </div>
+        <div class="page-actions">
+          <a class="btn" id="call" href="tel:">Позвонить</a>
+          <button class="btn btn-primary" type="button" id="save">Сохранить</button>
+        </div>
+      </header>
+      <div class="lead-layout">
+        <aside class="info">
+          <h2>Информация</h2>
+          <img class="profile" id="profile" alt="Фото профиля в Telegram" hidden>
+          <dl>
+            <dt>Источник</dt>
+            <dd id="info-source">—</dd>
+            <dt>Дата</dt>
+            <dd id="info-date">—</dd>
+            <dt>Телефон</dt>
+            <dd id="info-phone">—</dd>
+          </dl>
+        </aside>
+        <div class="lead-main">
+          <form id="editor" class="panel" novalidate>
+            <div class="form-grid">
+              <div class="field">
+                <label for="name">Имя</label>
+                <input id="name" maxlength="80" required autocomplete="name">
+                <p class="field-error" id="name-error" hidden></p>
+              </div>
+              <div class="field">
+                <label for="phone">Телефон</label>
+                <input id="phone" type="tel" inputmode="tel" maxlength="40" required autocomplete="tel">
+                <p class="field-error" id="phone-error" hidden></p>
+              </div>
+              <div class="field span-2">
+                <label for="object-type">Тип объекта</label>
+                <input id="object-type" maxlength="80" required>
+                <p class="field-error" id="object-type-error" hidden></p>
+              </div>
+              <div class="field">
+                <label for="stage">Этап</label>
+                <select id="stage"></select>
+                <p class="field-error" id="stage-error" hidden></p>
+              </div>
+              <div class="field">
+                <label for="area">Площадь, м²</label>
+                <input id="area" inputmode="decimal">
+                <p class="field-error" id="area-error" hidden></p>
+              </div>
+              <div class="field">
+                <label for="grade">Класс</label>
+                <select id="grade">
+                  <option value="">Не выбран</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="condition">Состояние</label>
+                <select id="condition">
+                  <option value="">Не выбрано</option>
+                </select>
+              </div>
+              <div class="field span-2">
+                <label for="package">Состав</label>
+                <select id="package">
+                  <option value="">Не выбран</option>
+                </select>
+              </div>
+            </div>
+            <div class="account" id="account" hidden>
+              <h2>Аккаунт Telegram</h2>
+              <p class="muted">Имя из диалога остаётся в поле «Имя». Здесь имя аккаунта.</p>
+              <div class="form-grid">
+                <div class="field">
+                  <label for="first">Имя в Telegram</label>
+                  <input id="first">
+                </div>
+                <div class="field">
+                  <label for="last">Фамилия</label>
+                  <input id="last">
+                </div>
+                <div class="field">
+                  <label for="username">Имя пользователя</label>
+                  <input id="username" spellcheck="false" placeholder="без знака @">
+                </div>
+                <div class="field span-2">
+                  <label for="bio">Описание</label>
+                  <textarea id="bio"></textarea>
+                </div>
+              </div>
+            </div>
+          </form>
+          <section class="estimate" id="estimate-box" aria-live="polite">
+            <h2>Вилка</h2>
+            <p id="estimate">Считаем…</p>
+          </section>
+          <section class="panel">
+            <h2>Фото объекта</h2>
+            <p class="muted" id="photos-empty" hidden>Фото объекта нет.</p>
+            <div class="photos" id="photos"></div>
+          </section>
+          <p><button class="btn btn-text" type="button" id="back">К списку</button></p>
+        </div>
+      </div>
+    </article>
+  </main>
+
+  <dialog id="viewer" aria-labelledby="viewer-title">
+    <div class="dialog-body viewer">
+      <h2 id="viewer-title">Фото объекта</h2>
+      <img id="viewer-image" alt="Фото объекта крупно">
+      <div class="dialog-actions">
+        <button class="btn" type="button" id="viewer-close">Закрыть</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="leave" aria-labelledby="leave-title">
+    <form class="dialog-body" method="dialog">
+      <h2 id="leave-title">Есть несохранённые изменения</h2>
+      <p>Сохранить правки перед уходом?</p>
+      <div class="dialog-actions">
+        <button class="btn btn-primary" type="submit" value="save">Сохранить</button>
+        <button class="btn" type="submit" value="discard">Не сохранять</button>
+        <button class="btn" type="submit" value="stay">Остаться</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+  <script type="module" src="js/lead.js"></script>
+  <noscript><p class="wrap">Чтобы открыть заявку, включите JavaScript.</p></noscript>
+</body>
+</html>

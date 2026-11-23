@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <title>Вход — Механика Комфорта</title>
+  <meta name="description" content="Вход владельца Механики Комфорта к списку заявок.">
+  <link rel="icon" href="logo.jpg" type="image/jpeg">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <a class="skip" href="#main">К содержанию</a>
+  <header class="top">
+    <a class="brand" href="index.html">
+      <img src="logo.jpg" alt="" width="96" height="96">
+      <span>Механика Комфорта</span>
+    </a>
+  </header>
+  <main class="wrap" id="main">
+    <section class="door" aria-labelledby="login-title">
+      <p class="kicker">Владелец</p>
+      <h1 id="login-title">Вход</h1>
+      <p class="lead">Пароль проверяет сервер. После входа открывается список заявок.</p>
+      <form id="login" novalidate>
+        <div class="field">
+          <label for="password">Пароль</label>
+          <div class="password-row">
+            <input id="password" name="password" type="password" autocomplete="current-password" maxlength="200" required>
+            <button class="btn btn-ghost" type="button" id="toggle" aria-pressed="false" aria-controls="password">Показать</button>
+          </div>
+          <p class="field-error" id="password-error" hidden></p>
+        </div>
+        <button class="btn btn-primary" type="submit">Войти</button>
+        <p class="note" id="note" role="alert" hidden></p>
+      </form>
+    </section>
+  </main>
+  <script type="module" src="js/login.js"></script>
+  <noscript><p class="wrap">Чтобы войти, включите JavaScript.</p></noscript>
+</body>
+</html>
