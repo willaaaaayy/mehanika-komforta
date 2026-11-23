@@ -35,9 +35,10 @@ public class LeadStore {
         this.path = path;
     }
 
-    public void append(Map<String, Object> lead) {
+    public String append(Map<String, Object> lead) {
+        String createdAt = OffsetDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS).format(STAMP);
         Map<String, Object> row = new LinkedHashMap<>();
-        row.put("created_at", OffsetDateTime.now(ZoneOffset.UTC).truncatedTo(ChronoUnit.MICROS).format(STAMP));
+        row.put("created_at", createdAt);
         row.putAll(lead);
         try {
             String line = Jsons.MAPPER.writeValueAsString(row);
@@ -47,6 +48,7 @@ public class LeadStore {
                 }
                 Files.writeString(path, line + "\n", StandardCharsets.UTF_8, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
             }
+            return createdAt;
         } catch (IOException ex) {
             throw new UncheckedIOException(ex);
         }

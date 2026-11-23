@@ -15,6 +15,7 @@ import com.mehanika.bot.BotSettings;
 import com.mehanika.bot.calc.Estimator;
 import com.mehanika.bot.catalog.CatalogRepository;
 import com.mehanika.bot.catalog.PriceCatalog;
+import com.mehanika.bot.lead.CrmLeadSink;
 import com.mehanika.bot.lead.LeadStore;
 import com.mehanika.bot.telegram.Keyboard;
 import com.mehanika.bot.telegram.Out;
@@ -38,18 +39,24 @@ public class Dialog {
     private final CatalogRepository catalogs;
     private final LeadStore leads;
     private final Long adminChatId;
+    private final CrmLeadSink crm;
     private final Map<Long, Session> sessions = new ConcurrentHashMap<>();
     private final Map<Long, Object> locks = new ConcurrentHashMap<>();
 
     @Autowired
-    public Dialog(CatalogRepository catalogs, LeadStore leads, BotSettings settings) {
-        this(catalogs, leads, settings.adminChatId());
+    public Dialog(CatalogRepository catalogs, LeadStore leads, BotSettings settings, CrmLeadSink crm) {
+        this(catalogs, leads, settings.adminChatId(), crm);
     }
 
     public Dialog(CatalogRepository catalogs, LeadStore leads, Long adminChatId) {
+        this(catalogs, leads, adminChatId, (name, phone, objectType) -> CrmLeadSink.Result.SENT);
+    }
+
+    public Dialog(CatalogRepository catalogs, LeadStore leads, Long adminChatId, CrmLeadSink crm) {
         this.catalogs = catalogs;
         this.leads = leads;
         this.adminChatId = adminChatId;
+        this.crm = crm;
     }
 
     public List<Out> onMessage(InMessage message) {
@@ -508,11 +515,16 @@ public class Dialog {
             return List.of(toast(query, "Заявка уже отправлена"));
         }
         session.submitted = true;
+        String createdAt;
         try {
-            leads.append(session.lead());
+            createdAt = leads.append(session.lead());
         } catch (RuntimeException ex) {
             session.submitted = false;
             return List.of(toast(query, "Не удалось записать заявку, попробуйте ещё раз"));
+        }
+        CrmLeadSink.Result forwarded = crm.forward(session.name, session.phone, objectLabel(session.objectType));
+        if (forwarded != CrmLeadSink.Result.UNAVAILABLE) {
+            crm.remember(createdAt);
         }
         List<Out> outs = new ArrayList<>();
         if (adminChatId != null && session.card != null) {
@@ -677,6 +689,14 @@ public class Dialog {
     private static String value(String data) {
         int colon = data.indexOf(':');
         return colon < 0 ? data : data.substring(colon + 1);
+    }
+
+    private String objectLabel(String key) {
+        if (key == null || key.isBlank()) {
+            return "";
+        }
+        String label = catalogs.forClient(null).objects().get(key);
+        return label == null || label.isBlank() ? key : label;
     }
 
     private static int n(Integer value) {

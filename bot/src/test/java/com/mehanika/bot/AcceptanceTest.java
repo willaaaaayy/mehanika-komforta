@@ -22,6 +22,7 @@ import com.mehanika.bot.catalog.PriceCatalog;
 import com.mehanika.bot.dialog.Dialog;
 import com.mehanika.bot.dialog.InCallback;
 import com.mehanika.bot.dialog.InMessage;
+import com.mehanika.bot.lead.CrmLeadSink;
 import com.mehanika.bot.lead.LeadStore;
 import com.mehanika.bot.telegram.Out;
 import com.mehanika.bot.telegram.UpdateRouter;
@@ -205,10 +206,27 @@ class AcceptanceTest {
     }
 
     @Test
+    void forwardSendsTheChosenObjectNotTheEstimate() throws IOException {
+        Path file = Files.createTempFile("leads", ".jsonl");
+        List<String> objects = new ArrayList<>();
+        CrmLeadSink sink = (name, phone, objectType) -> {
+            objects.add(name + "|" + phone + "|" + objectType);
+            return CrmLeadSink.Result.SENT;
+        };
+        Dialog dialog = new Dialog(catalogs, new LeadStore(file), 77L, sink);
+        driveSample(dialog, new ArrayList<>());
+        dialog.onMessage(msg("Иван"));
+        dialog.onMessage(msg("+7 (900) 000-00-00"));
+        String reply = text(dialog.onCallback(cb("ok:1")));
+        assertTrue(reply.contains("Заявку записал."));
+        assertEquals(List.of("Иван|+7 (900) 000-00-00|Квартира"), objects);
+    }
+
+    @Test
     void failedSaveRollsBack() {
         LeadStore broken = new LeadStore(Path.of("target", "missing", "leads.jsonl")) {
             @Override
-            public void append(Map<String, Object> lead) {
+            public String append(Map<String, Object> lead) {
                 throw new UncheckedIOException(new IOException("disk"));
             }
         };
