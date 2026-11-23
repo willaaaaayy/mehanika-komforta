@@ -38,27 +38,11 @@
     </section>
 
     <section class="crm" id="crm" hidden aria-labelledby="crm-title">
-      <p class="kicker">Заявки</p>
-      <h1 id="crm-title">Список</h1>
-      <p class="lead" id="empty" hidden>Заявок пока нет.</p>
-      <div class="table-wrap" id="table-wrap" hidden>
-        <table>
-          <thead>
-            <tr>
-              <th>Когда</th>
-              <th>Имя</th>
-              <th>Телефон</th>
-              <th>Тип объекта</th>
-              <th>Откуда</th>
-              <th>Этап</th>
-            </tr>
-          </thead>
-          <tbody id="rows"></tbody>
-        </table>
+      <div class="list-head">
+        <h1 id="crm-title">Заявки</h1>
+        <button type="button" id="create-open">Создать</button>
       </div>
-
-      <h2>Вручную</h2>
-      <form id="manual">
+      <form id="manual" hidden>
         <div class="field">
           <label for="manual-name">Имя</label>
           <input id="manual-name" required maxlength="80">
@@ -74,6 +58,56 @@
         <button type="submit">Добавить</button>
         <p class="form-note" id="manual-note" role="status"></p>
       </form>
+      <div class="list-tools">
+        <label>Поиск <input id="query" type="search"></label>
+        <label>Этап
+          <select id="stage-filter">
+            <option value="">Все</option>
+          </select>
+        </label>
+        <label>С <input id="from" type="date"></label>
+        <label>По <input id="to" type="date"></label>
+      </div>
+      <p class="lead" id="empty" hidden>Заявок пока нет.</p>
+      <p class="lead" id="none" hidden>Ничего не найдено.</p>
+      <div class="table-wrap" id="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Источник</th>
+              <th>Дата</th>
+              <th>Имя</th>
+              <th>Телефон</th>
+              <th>Тип объекта</th>
+              <th>Этап</th>
+            </tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+      <article class="card" id="card" hidden>
+        <header class="card-head">
+          <h2 id="card-name"></h2>
+          <p id="card-stage"></p>
+        </header>
+        <div class="card-body">
+          <dl>
+            <dt>Телефон</dt>
+            <dd id="card-phone"></dd>
+            <dt>Тип объекта</dt>
+            <dd id="card-object"></dd>
+            <dt>Источник</dt>
+            <dd id="card-source"></dd>
+          </dl>
+          <aside>
+            <p id="card-date"></p>
+            <label>Этап
+              <select id="card-stage-select"></select>
+            </label>
+          </aside>
+        </div>
+        <button type="button" id="card-close">К списку</button>
+      </article>
     </section>
   </main>
   <footer class="foot">
@@ -132,6 +166,82 @@
         load();
       }
 
+      var all = [];
+      var openId = null;
+      var stageFilter = document.getElementById("stage-filter");
+      var cardStage = document.getElementById("card-stage-select");
+      stages.forEach(function (pair) {
+        stageFilter.append(new Option(pair[1], pair[0]));
+        cardStage.append(new Option(pair[1], pair[0]));
+      });
+
+      function stageName(code) {
+        var found = stages.find(function (pair) { return pair[0] === code; });
+        return found ? found[1] : code;
+      }
+
+      function dayKey(value) {
+        var date = new Date(value);
+        if (Number.isNaN(date.getTime())) return "";
+        return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Saratov" }).format(date);
+      }
+
+      function visible() {
+        var query = document.getElementById("query").value.trim().toLowerCase();
+        var stage = stageFilter.value;
+        var from = document.getElementById("from").value;
+        var to = document.getElementById("to").value;
+        return all.filter(function (lead) {
+          var day = dayKey(lead.createdAt);
+          var haystack = (lead.name + " " + lead.phone + " " + lead.objectType).toLowerCase();
+          if (query && haystack.indexOf(query) === -1) return false;
+          if (stage && lead.stage !== stage) return false;
+          if (from && day < from) return false;
+          if (to && day > to) return false;
+          return true;
+        });
+      }
+
+      function draw() {
+        var rows = visible();
+        var body = document.getElementById("rows");
+        body.replaceChildren();
+        document.getElementById("empty").hidden = all.length !== 0;
+        document.getElementById("none").hidden = all.length === 0 || rows.length !== 0;
+        document.getElementById("table-wrap").hidden = rows.length === 0;
+        rows.forEach(function (lead) {
+          var tr = document.createElement("tr");
+          tr.append(cell(sources[lead.source] || lead.source));
+          tr.append(cell(when(lead.createdAt)));
+          tr.append(cell(lead.name));
+          tr.append(cell(lead.phone));
+          tr.append(cell(lead.objectType));
+          tr.append(cell(stageName(lead.stage)));
+          tr.addEventListener("click", function () { openCard(lead.id); });
+          body.append(tr);
+        });
+        if (openId) openCard(openId);
+      }
+
+      function openCard(id) {
+        var lead = all.find(function (item) { return item.id === id; });
+        var card = document.getElementById("card");
+        if (!lead) {
+          card.hidden = true;
+          openId = null;
+          return;
+        }
+        openId = id;
+        card.hidden = false;
+        document.getElementById("card-name").textContent = lead.name;
+        document.getElementById("card-stage").textContent = stageName(lead.stage);
+        document.getElementById("card-phone").textContent = lead.phone;
+        document.getElementById("card-object").textContent = lead.objectType;
+        document.getElementById("card-source").textContent = sources[lead.source] || lead.source;
+        document.getElementById("card-date").textContent = when(lead.createdAt);
+        cardStage.value = lead.stage;
+      }
+
       function load() {
         api("/api/leads").then(function (response) {
           if (response.status === 401) {
@@ -141,36 +251,8 @@
           return response.json();
         }).then(function (rows) {
           if (!rows) return;
-          var body = document.getElementById("rows");
-          body.replaceChildren();
-          document.getElementById("empty").hidden = rows.length !== 0;
-          document.getElementById("table-wrap").hidden = rows.length === 0;
-          rows.forEach(function (lead) {
-            var tr = document.createElement("tr");
-            tr.append(cell(when(lead.createdAt)));
-            tr.append(cell(lead.name));
-            tr.append(cell(lead.phone));
-            tr.append(cell(lead.objectType));
-            tr.append(cell(sources[lead.source] || lead.source));
-            var select = document.createElement("select");
-            stages.forEach(function (pair) {
-              var option = document.createElement("option");
-              option.value = pair[0];
-              option.textContent = pair[1];
-              if (pair[0] === lead.stage) option.selected = true;
-              select.append(option);
-            });
-            select.addEventListener("change", function () {
-              api("/api/leads/" + lead.id, {
-                method: "PATCH",
-                body: JSON.stringify({ stage: select.value })
-              });
-            });
-            var td = document.createElement("td");
-            td.append(select);
-            tr.append(td);
-            body.append(tr);
-          });
+          all = rows;
+          draw();
         });
       }
 
@@ -211,6 +293,30 @@
           }
           note.textContent = "Пароль не подошёл.";
         });
+      });
+
+      ["query", "stage-filter", "from", "to"].forEach(function (id) {
+        var field = document.getElementById(id);
+        field.addEventListener("input", draw);
+        field.addEventListener("change", draw);
+      });
+
+      document.getElementById("create-open").addEventListener("click", function () {
+        var form = document.getElementById("manual");
+        form.hidden = !form.hidden;
+      });
+
+      document.getElementById("card-close").addEventListener("click", function () {
+        openId = null;
+        document.getElementById("card").hidden = true;
+      });
+
+      cardStage.addEventListener("change", function () {
+        if (!openId) return;
+        api("/api/leads/" + openId, {
+          method: "PATCH",
+          body: JSON.stringify({ stage: cardStage.value })
+        }).then(function () { load(); });
       });
 
       document.getElementById("manual").addEventListener("submit", function (event) {

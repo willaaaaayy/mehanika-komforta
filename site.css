@@ -528,9 +528,69 @@ th {
   text-transform: uppercase;
 }
 
-.who {
-  margin: 1rem 0 0;
-  color: var(--ink);
+.list-head,
+.card-head,
+.card-body {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 1rem 2rem;
+  align-items: center;
+}
+
+.list-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8rem 1.4rem;
+  margin: 1.4rem 0 0.4rem;
+}
+
+.list-tools label,
+.card aside label {
+  color: var(--muted);
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.list-tools input,
+.list-tools select,
+.card aside select {
+  display: block;
+  margin-top: 0.25rem;
+  min-width: 9rem;
+  text-transform: none;
+  letter-spacing: 0;
+  font-size: 1rem;
+}
+
+#rows tr {
+  cursor: pointer;
+}
+
+.card {
+  margin-top: 2rem;
+  padding-top: 1.4rem;
+  border-top: 1px solid var(--line);
+}
+
+.card dl {
+  display: grid;
+  grid-template-columns: 8rem minmax(0, 1fr);
+  gap: 0.45rem 1rem;
+  margin: 0;
+}
+
+.card dt {
+  color: var(--muted);
+}
+
+.card dd {
+  margin: 0;
+}
+
+.card aside {
+  min-width: 12rem;
 }
 
 .logout {
