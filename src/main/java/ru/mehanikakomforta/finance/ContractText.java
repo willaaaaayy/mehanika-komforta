@@ -1,13 +1,13 @@
 package ru.mehanikakomforta.finance;
 
-import org.apache.poi.xwpf.usermodel.XWPFDocument;
-
 import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.ZipInputStream;
 
 final class ContractText {
 
@@ -49,17 +49,37 @@ final class ContractText {
     }
 
     private static String text(byte[] bytes) {
-        try (XWPFDocument document = new XWPFDocument(new ByteArrayInputStream(bytes))) {
-            StringBuilder body = new StringBuilder();
-            document.getParagraphs().forEach(paragraph -> {
-                String line = paragraph.getText();
-                if (line != null && !line.isBlank()) {
-                    body.append(line.replace('\u00A0', ' ').trim()).append('\n');
+        try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(bytes))) {
+            var entry = zip.getNextEntry();
+            while (entry != null) {
+                if ("word/document.xml".equals(entry.getName())) {
+                    return paragraphs(new String(zip.readAllBytes(), StandardCharsets.UTF_8));
                 }
-            });
-            return body.toString();
+                entry = zip.getNextEntry();
+            }
+            return null;
         } catch (Exception exception) {
             return null;
+        }
+    }
+
+    private static String paragraphs(String xml) {
+        StringBuilder body = new StringBuilder();
+        Matcher paragraph = Pattern.compile("<w:p[\\s>][\\s\\S]*?</w:p>").matcher(xml);
+        while (paragraph.find()) {
+            Matcher run = Pattern.compile("<w:t[^>]*>([^<]*)</w:t>").matcher(paragraph.group());
+            StringBuilder line = new StringBuilder();
+            while (run.find()) {
+                line.append(run.group(1));
+            }
+            append(body, line.toString().replace("&quot;", "\"").replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">"));
+        }
+        return body.toString();
+    }
+
+    private static void append(StringBuilder body, String line) {
+        if (line != null && !line.isBlank()) {
+            body.append(line.replace('\u00A0', ' ').trim()).append('\n');
         }
     }
 
@@ -82,7 +102,7 @@ final class ContractText {
             return null;
         }
         String window = text.substring(start.end(), Math.min(text.length(), start.end() + 160));
-        Matcher money = Pattern.compile("([0-9][0-9 \\u00A0]*)\\s*руб").matcher(window);
+        Matcher money = Pattern.compile("([0-9]{1,3}(?:[ \\u00A0][0-9]{3})+|[0-9]+)\\s*(?:\\([^)]{0,120}\\)\\s*)?руб").matcher(window);
         if (!money.find()) {
             return null;
         }
@@ -107,11 +127,15 @@ final class ContractText {
         boolean seen = false;
         for (String line : lines) {
             String trimmed = line.trim();
-            if (!seen) {
-                seen = trimmed.contains(label);
+            if (!seen && trimmed.contains(label)) {
+                String rest = trimmed.substring(trimmed.indexOf(label) + label.length()).replace(":", "").trim();
+                if (!rest.isBlank()) {
+                    return rest;
+                }
+                seen = true;
                 continue;
             }
-            if (!trimmed.isBlank()) {
+            if (seen && !trimmed.isBlank()) {
                 return trimmed;
             }
         }
