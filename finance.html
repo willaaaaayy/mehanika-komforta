@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <title>Финансы — Механика Комфорта</title>
+  <link rel="icon" href="logo.jpg" type="image/jpeg">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <a class="skip" href="#main">К содержанию</a>
+  <header class="bar">
+    <div class="brand">
+      <img src="logo.jpg" alt="" width="96" height="96">
+      <span>Механика Комфорта</span>
+    </div>
+    <nav aria-label="Разделы">
+      <a href="leads.html">Заявки</a>
+      <a href="finance.html" aria-current="page">Финансы</a>
+    </nav>
+    <button class="btn btn-ghost bar-end" type="button" id="logout">Выйти</button>
+  </header>
+  <main class="wrap" id="main">
+    <div class="page-head">
+      <h1 id="title">Финансы</h1>
+      <div class="page-actions">
+        <button class="btn btn-primary" type="button" id="upload-open">Загрузить договор</button>
+        <button class="btn" type="button" id="refresh">Обновить</button>
+      </div>
+    </div>
+    <div class="tools">
+      <div class="field">
+        <label for="period">Период</label>
+        <select id="period">
+          <option value="month">Месяц</option>
+          <option value="quarter">Квартал</option>
+          <option value="year">Год</option>
+          <option value="custom">Свой</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="from">Дата с</label>
+        <input id="from" type="date">
+      </div>
+      <div class="field">
+        <label for="to">Дата по</label>
+        <input id="to" type="date">
+      </div>
+      <div class="field">
+        <label for="client">Клиент</label>
+        <select id="client"><option value="">Все</option></select>
+      </div>
+      <div class="field">
+        <label for="object">Объект</label>
+        <select id="object"><option value="">Все</option></select>
+      </div>
+      <div class="field">
+        <label for="mode">Учёт</label>
+        <select id="mode">
+          <option value="cash">Касса</option>
+          <option value="accrual">Начисление</option>
+        </select>
+      </div>
+    </div>
+    <div class="tabs" id="tabs" role="tablist">
+      <a href="finance.html" data-tab="">Обзор</a>
+      <a href="finance.html?tab=clients" data-tab="clients">Заказчики</a>
+    </div>
+    <p class="banner" id="banner" role="alert" hidden></p>
+    <div class="skeleton" id="skeleton" aria-hidden="true"><span></span><span></span><span></span></div>
+    <section id="overview" hidden>
+      <div class="metrics" id="metrics"></div>
+      <section class="panel">
+        <h2>Требует внимания</h2>
+        <div id="attention"></div>
+      </section>
+      <section class="panel">
+        <h2>Поступления по неделям</h2>
+        <div id="weeks"></div>
+      </section>
+    </section>
+    <section id="customers" hidden>
+      <div class="empty" id="empty" hidden>
+        <p>Загрузите договор или внесите первый расход.</p>
+        <button class="btn btn-primary" type="button" id="empty-upload">Загрузить договор</button>
+      </div>
+      <div id="client-list"></div>
+    </section>
+  </main>
+
+  <dialog id="upload" aria-labelledby="upload-title">
+    <form class="dialog-body" id="upload-form">
+      <h2 id="upload-title">Договор</h2>
+      <p class="muted">DOCX, не больше 20 МБ. До кнопки «Создать» в финансы ничего не попадает.</p>
+      <div class="drop" id="drop">
+        <p>Перетащите договор или выберите файл.</p>
+        <button class="btn" type="button" id="pick">Выбрать DOCX</button>
+        <input id="file" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
+      </div>
+      <p id="file-note" class="muted"></p>
+      <div id="review" hidden>
+        <div class="form-grid">
+          <div class="field">
+            <label for="number">Номер</label>
+            <input id="number">
+          </div>
+          <div class="field">
+            <label for="amount">Сумма, ₽</label>
+            <input id="amount" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label for="client-name">Клиент</label>
+            <input id="client-name">
+          </div>
+          <div class="field">
+            <label for="client-inn">ИНН</label>
+            <input id="client-inn">
+          </div>
+          <div class="field span-2">
+            <label for="object-address">Объект</label>
+            <input id="object-address">
+          </div>
+        </div>
+        <h3>График платежей</h3>
+        <div id="schedule"></div>
+        <button class="btn btn-text" type="button" id="add-row">Добавить платёж</button>
+      </div>
+      <p class="note" id="upload-status" role="status" hidden></p>
+      <div class="dialog-actions">
+        <button class="btn btn-primary" type="submit" id="create" disabled>Создать</button>
+        <button class="btn" type="button" id="upload-close">Закрыть</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="pay" aria-labelledby="pay-title">
+    <form class="dialog-body" id="pay-form">
+      <h2 id="pay-title">Оплата</h2>
+      <div class="field">
+        <label for="pay-amount">Сумма, ₽</label>
+        <input id="pay-amount" inputmode="decimal" required>
+      </div>
+      <div class="field">
+        <label for="pay-date">Дата</label>
+        <input id="pay-date" type="date" required>
+      </div>
+      <div class="field">
+        <label for="pay-method">Способ</label>
+        <select id="pay-method">
+          <option value="bank">Перевод</option>
+          <option value="card">Карта</option>
+          <option value="cash">Наличные</option>
+        </select>
+      </div>
+      <p class="note" id="pay-status" role="status" hidden></p>
+      <div class="dialog-actions">
+        <button class="btn btn-primary" type="submit">Отметить оплату</button>
+        <button class="btn" type="button" id="pay-close">Закрыть</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="js/finance.js"></script>
+  <noscript><p class="wrap">Чтобы открыть финансы, включите JavaScript.</p></noscript>
+</body>
+</html>

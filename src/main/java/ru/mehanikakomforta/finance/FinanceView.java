@@ -1,0 +1,59 @@
+package ru.mehanikakomforta.finance;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+
+record FinanceView(
+        Totals totals,
+        List<ClientRow> clients,
+        List<Attention> attention,
+        List<Week> weeks
+) {
+    record Totals(
+            BigDecimal receivable,
+            BigDecimal payable,
+            BigDecimal spent,
+            BigDecimal received,
+            BigDecimal profit,
+            BigDecimal invested
+    ) {
+    }
+
+    record ClientRow(
+            String id,
+            String name,
+            int contracts,
+            BigDecimal amount,
+            BigDecimal invoiced,
+            BigDecimal paid,
+            BigDecimal due,
+            BigDecimal overdue,
+            NextPayment nextPayment,
+            List<Item> items
+    ) {
+    }
+
+    record NextPayment(BigDecimal amount, LocalDate date) {
+    }
+
+    record Item(Long contractId, String number, String object, List<Step> schedule) {
+    }
+
+    record Step(
+            Long id,
+            String title,
+            BigDecimal amount,
+            LocalDate due,
+            String kind,
+            String status,
+            Integer overdueDays
+    ) {
+    }
+
+    record Attention(String clientId, String title, BigDecimal amount, Integer days) {
+    }
+
+    record Week(String week, BigDecimal in) {
+    }
+}

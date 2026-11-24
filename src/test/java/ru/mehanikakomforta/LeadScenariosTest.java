@@ -1,5 +1,6 @@
 package ru.mehanikakomforta;
 
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -460,6 +461,62 @@ class LeadScenariosTest {
                 .andExpect(jsonPath("$.water").doesNotExist())
                 .andExpect(jsonPath("$.chase").value(true))
                 .andExpect(jsonPath("$.heightM").value(3.2));
+    }
+
+    @Test
+    void ownerConfirmsAContractAndSeesItInFinance() throws Exception {
+        byte[] docx;
+        try (XWPFDocument document = new XWPFDocument()) {
+            document.createParagraph().createRun().setText("ДОГОВОР № 11-10-1-69");
+            document.createParagraph().createRun().setText("Заказчик поручает выполнить работы на объекте: «Дом в районе Солнечный», б/с В, этаж 17.");
+            document.createParagraph().createRun().setText("Ориентировочная стоимость работ составляет 1 062 500 руб. 00 коп.");
+            document.createParagraph().createRun().setText("авансовый платеж в размере 50% (531 250 руб. 00 коп.)");
+            document.createParagraph().createRun().setText("ЗАКАЗЧИК");
+            document.createParagraph().createRun().setText("ООО СЗ ГК «Кронверк»");
+            document.createParagraph().createRun().setText("ИНН 6450096705");
+            document.createParagraph().createRun().setText("ПОДРЯДЧИК");
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            document.write(out);
+            docx = out.toByteArray();
+        }
+        MockMvc mvc = mvc();
+        MvcResult login = mvc.perform(post("/api/session")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"password\":\"test-admin-secret\"}"))
+                .andExpect(status().isNoContent())
+                .andReturn();
+        mvc.perform(multipart("/api/contracts")
+                        .file(new MockMultipartFile("file", "dogovor.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", docx))
+                        .with(csrf()))
+                .andExpect(status().isUnauthorized());
+        MvcResult uploaded = mvc.perform(multipart("/api/contracts")
+                        .file(new MockMultipartFile("file", "dogovor.docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", docx))
+                        .session(session(login))
+                        .with(csrf()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.number").value("11-10-1-69"))
+                .andExpect(jsonPath("$.amount").value(1062500))
+                .andExpect(jsonPath("$.client.name").value("ООО СЗ ГК «Кронверк»"))
+                .andExpect(jsonPath("$.schedule[0].kind").value("advance"))
+                .andExpect(jsonPath("$.schedule[1].amount").value(531250))
+                .andReturn();
+        String id = uploaded.getResponse().getContentAsString().replaceFirst(".*?\"id\":(\\d+).*", "$1");
+        mvc.perform(get("/api/finance").session(session(login)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.clients").isEmpty());
+        mvc.perform(patch("/api/contracts/" + id)
+                        .session(session(login))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(uploaded.getResponse().getContentAsString()))
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/finance").session(session(login)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totals.receivable").value(1062500))
+                .andExpect(jsonPath("$.totals.payable").doesNotExist())
+                .andExpect(jsonPath("$.clients[0].name").value("ООО СЗ ГК «Кронверк»"))
+                .andExpect(jsonPath("$.clients[0].items[0].object").value(org.hamcrest.Matchers.containsString("этаж 17")));
     }
 
     private static MockHttpSession session(MvcResult result) {
