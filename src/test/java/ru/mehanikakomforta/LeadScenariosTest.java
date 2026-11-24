@@ -446,9 +446,10 @@ class LeadScenariosTest {
                         .header("X-Lead-Token", "test-lead-token")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"name":"Полный","phone":"79001110001","objectType":"Квартира","source":"telegram","floorArea":42.5,"grade":"standard","condition":"old","packageCode":null,"works":["screed","plaster"],"city":"Казань","electro":4,"water":null,"cameras":null,"lan":null,"chase":true,"heightM":3.2,"complexItems":null,"complexNote":null}
+                                {"name":"Полный","phone":"79001110001","objectType":"Квартира","source":"telegram","section":"both","floorArea":42.5,"grade":"standard","condition":"old","packageCode":null,"works":["screed","plaster"],"city":"Казань","electro":4,"water":null,"cameras":null,"lan":null,"chase":true,"heightM":3.2,"complexItems":null,"complexNote":null}
                                 """))
                 .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.section").value("both"))
                 .andExpect(jsonPath("$.floorArea").value(42.5))
                 .andExpect(jsonPath("$.grade").value("standard"))
                 .andExpect(jsonPath("$.condition").value("old"))

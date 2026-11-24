@@ -8,6 +8,7 @@ public record LeadRequest(
         String phone,
         String objectType,
         String source,
+        String section,
         TelegramInput telegram,
         BigDecimal floorArea,
         String grade,

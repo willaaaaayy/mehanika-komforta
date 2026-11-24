@@ -15,6 +15,13 @@ final class SurveyText {
     }
 
     static String check(LeadRequest request, JsonNode prices) {
+        String section = request.section() == null ? null : request.section().trim();
+        if (section != null && section.isEmpty()) {
+            section = null;
+        }
+        if (section != null && !section.equals("finish") && !section.equals("eng") && !section.equals("both") && !section.equals("complex")) {
+            return "section";
+        }
         if (request.floorArea() != null
                 && (request.floorArea().signum() <= 0 || request.floorArea().compareTo(new BigDecimal("50000")) > 0)) {
             return "floorArea";

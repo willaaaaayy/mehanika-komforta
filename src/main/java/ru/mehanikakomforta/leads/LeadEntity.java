@@ -71,6 +71,9 @@ public class LeadEntity {
     @Column(name = "package_code", length = 16)
     private String packageCode;
 
+    @Column(length = 16)
+    private String section;
+
     @Column(length = 80)
     private String city;
 
@@ -186,6 +189,10 @@ public class LeadEntity {
         return packageCode;
     }
 
+    public String getSection() {
+        return section;
+    }
+
     public String getCity() {
         return city;
     }
@@ -227,6 +234,8 @@ public class LeadEntity {
     }
 
     public void survey(LeadRequest request) {
+        String section = request.section() == null ? null : request.section().trim();
+        this.section = section == null || section.isEmpty() ? null : section;
         this.floorArea = request.floorArea();
         this.grade = request.grade();
         this.conditionCode = request.condition();

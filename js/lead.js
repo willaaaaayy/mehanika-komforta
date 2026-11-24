@@ -173,6 +173,13 @@ function showDialog(data) {
   const box = document.getElementById("dialog-facts");
   const list = document.getElementById("dialog-facts-list");
   list.replaceChildren();
+  const sections = {
+    finish: "Отделка",
+    eng: "Инженерия",
+    both: "Отделка и инженерия",
+    complex: "Сложная система"
+  };
+  fact(list, "Раздел", data.section == null || data.section === "" ? null : (sections[data.section] || data.section));
   fact(list, "Город", data.city);
   fact(list, "Работы", titled(data.works, WORK_TITLES));
   fact(list, "Электроточки", data.electro);
