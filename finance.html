@@ -92,12 +92,15 @@
   <dialog id="upload" aria-labelledby="upload-title">
     <form class="dialog-body" id="upload-form">
       <h2 id="upload-title">Договор</h2>
-      <p class="muted">DOCX, не больше 20 МБ. До кнопки «Создать» в финансы ничего не попадает.</p>
+      <p class="muted">PDF или DOCX, не больше 20 МБ. До кнопки «Создать» в финансы ничего не попадает.</p>
+      <ul class="formats">
+        <li><button class="btn" type="button" id="pick-pdf">PDF<small>файл .pdf</small></button></li>
+        <li><button class="btn" type="button" id="pick-docx">DOCX<small>файл .docx</small></button></li>
+      </ul>
       <div class="drop" id="drop">
-        <p>Перетащите договор или выберите файл.</p>
-        <button class="btn" type="button" id="pick">Выбрать DOCX</button>
-        <input id="file" type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden>
+        <p>Или перетащите сюда PDF либо DOCX.</p>
       </div>
+      <input id="file" type="file" hidden>
       <p id="file-note" class="muted"></p>
       <div id="review" hidden>
         <div class="form-grid">

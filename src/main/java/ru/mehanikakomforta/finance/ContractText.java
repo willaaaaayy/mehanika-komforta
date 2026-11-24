@@ -1,5 +1,9 @@
 package ru.mehanikakomforta.finance;
 
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
+
 import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -21,7 +25,7 @@ final class ContractText {
     }
 
     static Read read(byte[] bytes) {
-        String text = text(bytes);
+        String text = isPdf(bytes) ? pdf(bytes) : text(bytes);
         if (text == null || text.isBlank()) {
             return null;
         }
@@ -46,6 +50,19 @@ final class ContractText {
             schedule.add(new Row("Оплата по договору", amount, "final"));
         }
         return new Read(number, client, inn, objectAddress, amount, schedule);
+    }
+
+    private static boolean isPdf(byte[] bytes) {
+        return bytes.length > 4 && bytes[0] == '%' && bytes[1] == 'P' && bytes[2] == 'D' && bytes[3] == 'F';
+    }
+
+    private static String pdf(byte[] bytes) {
+        try (PDDocument document = Loader.loadPDF(bytes)) {
+            String text = new PDFTextStripper().getText(document);
+            return text == null ? null : text.replace('\u00A0', ' ');
+        } catch (Exception exception) {
+            return null;
+        }
     }
 
     private static String text(byte[] bytes) {

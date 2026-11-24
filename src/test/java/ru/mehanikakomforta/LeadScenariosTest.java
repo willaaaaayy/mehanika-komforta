@@ -517,6 +517,44 @@ class LeadScenariosTest {
                 .andExpect(jsonPath("$.totals.payable").doesNotExist())
                 .andExpect(jsonPath("$.clients[0].name").value("ООО СЗ ГК «Кронверк»"))
                 .andExpect(jsonPath("$.clients[0].items[0].object").value(org.hamcrest.Matchers.containsString("этаж 17")));
+        byte[] pdf;
+        try (org.apache.pdfbox.pdmodel.PDDocument document = new org.apache.pdfbox.pdmodel.PDDocument()) {
+            org.apache.pdfbox.pdmodel.PDPage page = new org.apache.pdfbox.pdmodel.PDPage();
+            document.addPage(page);
+            org.apache.pdfbox.pdmodel.font.PDType0Font font = org.apache.pdfbox.pdmodel.font.PDType0Font.load(
+                    document, java.nio.file.Path.of("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf").toFile());
+            try (org.apache.pdfbox.pdmodel.PDPageContentStream stream = new org.apache.pdfbox.pdmodel.PDPageContentStream(document, page)) {
+                stream.beginText();
+                stream.setFont(font, 11);
+                stream.setLeading(16);
+                stream.newLineAtOffset(40, 760);
+                for (String line : java.util.List.of(
+                        "ДОГОВОР № 12-01-2-70",
+                        "на объекте: «Дом в районе Солнечный», б/с В, этаж 17",
+                        "Ориентировочная стоимость работ составляет 1 062 500 (Один миллион) руб. 00 коп.",
+                        "авансовый платеж в размере 50% (531 250 (Пятьсот) руб. 00 коп.)",
+                        "ЗАКАЗЧИК",
+                        "ООО СЗ ГК «Кронверк»",
+                        "ИНН 6450096705",
+                        "ПОДРЯДЧИК"
+                )) {
+                    stream.showText(line);
+                    stream.newLine();
+                }
+                stream.endText();
+            }
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            document.save(out);
+            pdf = out.toByteArray();
+        }
+        mvc.perform(multipart("/api/contracts")
+                        .file(new MockMultipartFile("file", "dogovor.pdf", "application/pdf", pdf))
+                        .session(session(login))
+                        .with(csrf()))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.number").value("12-01-2-70"))
+                .andExpect(jsonPath("$.amount").value(1062500))
+                .andExpect(jsonPath("$.schedule[0].kind").value("advance"));
     }
 
     private static MockHttpSession session(MvcResult result) {

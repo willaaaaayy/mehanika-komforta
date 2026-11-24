@@ -420,9 +420,13 @@ function openUpload() {
 
 async function sendFile(file) {
   uploadStatus.hidden = true;
-  if (!file.name.toLowerCase().endsWith(".docx")) {
+  const name = file.name.toLowerCase();
+  const type = (file.type || "").toLowerCase();
+  const pdf = name.endsWith(".pdf") || type === "application/pdf";
+  const docx = name.endsWith(".docx") || type === "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+  if (!pdf && !docx) {
     uploadStatus.hidden = false;
-    uploadStatus.textContent = "Нужен договор в формате DOCX.";
+    uploadStatus.textContent = "Нужен договор в формате PDF или DOCX.";
     return;
   }
   if (file.size > limit) {
@@ -474,7 +478,17 @@ async function sendFile(file) {
 document.getElementById("upload-open").addEventListener("click", openUpload);
 document.getElementById("empty-upload").addEventListener("click", openUpload);
 document.getElementById("upload-close").addEventListener("click", function () { upload.close(); });
-document.getElementById("pick").addEventListener("click", function () { fileInput.click(); });
+function pick(accept) {
+  fileInput.accept = accept;
+  fileInput.value = "";
+  fileInput.click();
+}
+document.getElementById("pick-pdf").addEventListener("click", function () {
+  pick(".pdf,application/pdf");
+});
+document.getElementById("pick-docx").addEventListener("click", function () {
+  pick(".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+});
 fileInput.addEventListener("change", function () {
   if (fileInput.files[0]) sendFile(fileInput.files[0]);
 });

@@ -135,8 +135,8 @@ class ContractController {
 
     @PostMapping(value = "/api/contracts", consumes = "multipart/form-data")
     ResponseEntity<?> upload(@RequestParam(value = "file", required = false) MultipartFile file) throws IOException {
-        if (file == null || file.isEmpty() || file.getOriginalFilename() == null
-                || !file.getOriginalFilename().toLowerCase(Locale.ROOT).endsWith(".docx")) {
+        String filename = file == null || file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase(Locale.ROOT);
+        if (file == null || file.isEmpty() || !(filename.endsWith(".docx") || filename.endsWith(".pdf"))) {
             return ResponseEntity.badRequest().body(new ApiError("contract"));
         }
         ContractText.Read read = ContractText.read(file.getBytes());
