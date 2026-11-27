@@ -252,6 +252,33 @@ function renderList(panel, items, emptyText, line) {
   items.forEach(function (item) { box.append(line(item)); });
 }
 
+function paymentText(next) {
+  if (!next) return "—";
+  const amount = sumText(next.amount);
+  if (next.date || next.due) return amount + ", " + (next.date || next.due);
+  if (next.dueRule && next.dueRule.basis === "act") return amount + ", по акту";
+  return amount;
+}
+
+function renderHeader() {
+  const status = { current: "Текущий", archived: "Архив" };
+  document.getElementById("card-title").textContent = client.name || "Клиент";
+  document.getElementById("card-status").textContent = status[client.status] || client.status || "";
+  const box = document.getElementById("client-metrics");
+  box.replaceChildren();
+  [["Сумма договоров", sumText(client.amount)], ["Оплачено", sumText(client.paid)], ["Остаток", sumText(client.due)], ["Ближайший платёж", paymentText(client.nextPayment)]].forEach(function (item) {
+    const card = document.createElement("div");
+    card.className = "metric";
+    const name = document.createElement("span");
+    name.textContent = item[0];
+    const value = document.createElement("strong");
+    value.className = "num";
+    value.textContent = item[1];
+    card.append(name, value);
+    box.append(card);
+  });
+}
+
 function renderFinance() {
   const box = document.getElementById("panel-finance");
   box.replaceChildren();
@@ -309,21 +336,12 @@ async function load() {
     await loadSource();
     skeleton.hidden = true;
     card.hidden = false;
-    document.getElementById("card-title").textContent = client.name || "Клиент";
-    document.getElementById("card-status").textContent = client.status || "";
+    renderHeader();
     renderOverview();
     await loadPhotos();
     await renderData();
     const contracts = document.getElementById("panel-contracts");
     contracts.replaceChildren();
-    const upload = document.createElement("button");
-    upload.type = "button";
-    upload.className = "btn btn-primary";
-    upload.textContent = "Загрузить договор";
-    upload.addEventListener("click", function () {
-      openContractUpload({ clientId: id, stay: true, onDone: function () { location.reload(); } });
-    });
-    contracts.append(upload);
     if (!client.contracts || !client.contracts.length) {
       const empty = document.createElement("p");
       empty.textContent = "Договоров пока нет.";
@@ -384,6 +402,10 @@ async function load() {
     banner.textContent = "Нет сети.";
   }
 }
+
+document.getElementById("upload-contract").addEventListener("click", function () {
+  openContractUpload({ clientId: id, stay: true, onDone: function () { location.reload(); } });
+});
 
 document.getElementById("unconvert").addEventListener("click", async function () {
   if (!client || !client.sourceLeadId) return;

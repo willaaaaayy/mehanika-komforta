@@ -118,10 +118,10 @@ a {
 }
 
 .top,
-.bar {
+header.bar {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 8px;
   padding: 8px var(--pad);
   background: var(--surface);
   border-bottom: 1px solid var(--border);
@@ -130,25 +130,85 @@ a {
   z-index: 10;
 }
 
+header.bar { flex-wrap: wrap; }
+
+.nav-toggle {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+
+header.bar .brand { flex: 1 1 auto; min-width: 0; }
+header.bar .brand span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+header.bar .menu { margin-left: auto; flex: 0 0 auto; }
+.nav-toggle:focus-visible + .menu { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+@media (max-width: 1023px) {
+  header.bar { align-items: center; row-gap: 8px; }
+  header.bar .brand img { width: 2.5rem; height: 2.5rem; flex: 0 0 auto; }
+  header.bar .menu,
+  header.bar .bar-end { flex: 0 0 auto; }
+  header.bar .menu {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--surface);
+  }
+}
+
+@media (max-width: 520px) {
+  header.bar .brand span { display: none; }
+}
+
 .top nav,
-.bar nav {
+header.bar nav {
   display: flex;
   align-items: center;
   gap: 16px;
 }
 
+header.bar nav {
+  display: none;
+  flex: 1 0 100%;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  order: 5;
+  margin: 0 -16px;
+  padding: 4px 16px 8px;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+}
+
+.nav-toggle:checked ~ header.bar nav,
+header.bar .nav-toggle:checked ~ nav {
+  display: flex;
+}
+
 .top nav a,
-.bar nav a {
+header.bar nav a {
   color: var(--text-muted);
-  font-size: 14px;
-  font-weight: 600;
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 4px;
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.3;
   text-decoration: none;
+  white-space: normal;
 }
 
 .top nav a[aria-current="page"],
-.bar nav a[aria-current="page"],
+header.bar nav a[aria-current="page"],
 .top nav a:hover,
-.bar nav a:hover {
+header.bar nav a:hover {
   color: var(--text);
 }
 
@@ -661,7 +721,9 @@ dialog::backdrop {
 }
 
 .dialog-body {
+  max-height: calc(100dvh - 24px);
   padding: 20px 16px 16px;
+  overflow: auto;
 }
 
 .dialog-actions {
@@ -943,31 +1005,61 @@ dialog::backdrop {
     border: 0;
   }
 
-  .bar {
+  header.bar {
     position: fixed;
     inset: 0 auto 0 0;
-    width: 240px;
+    width: 15.5rem;
+    height: 100vh;
+    height: 100dvh;
     flex-direction: column;
+    flex-wrap: nowrap;
     align-items: stretch;
+    overflow: hidden;
     border-bottom: 0;
     border-right: 1px solid var(--border);
-    padding: 20px 16px;
+    padding: 16px;
   }
 
-  .bar nav {
-    flex-direction: column;
-    align-items: stretch;
-    margin-top: 24px;
+  header.bar .brand { flex: 0 1 auto; align-items: flex-start; }
+  header.bar .brand img { width: 3rem; height: 3rem; }
+  header.bar .brand span { white-space: normal; overflow: visible; text-overflow: clip; }
+
+  header.bar .menu,
+  header.bar .nav-toggle { display: none; }
+
+  header.bar nav,
+  header.bar .nav-toggle:checked ~ nav {
+    display: flex;
+    flex: 1 1 auto;
+    flex-basis: auto;
+    order: 0;
+    min-height: 0;
+    margin: 16px 0;
+    padding: 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    border: 0;
   }
 
-  .bar nav a {
-    min-height: 36px;
+  header.bar nav a {
+    min-height: 40px;
+    padding: 6px 8px;
+    border-radius: var(--radius);
+    font-size: 15px;
   }
 
-  .bar-end { margin-top: auto; }
+  header.bar nav a[aria-current="page"] {
+    background: var(--accent-soft);
+  }
+
+  header.bar .bar-end {
+    flex: 0 0 auto;
+    width: 100%;
+    margin-top: 0;
+  }
 
   .wrap {
-    margin-left: 240px;
+    margin-left: 15.5rem;
   }
 
   .tools {
@@ -1049,6 +1141,7 @@ dialog.dialog-wide { width: min(64rem, calc(100% - 24px)); }
 .tabs {
   display: flex;
   gap: 8px;
+  max-width: 100%;
   overflow-x: auto;
   margin: 16px 0;
 }
@@ -1099,10 +1192,16 @@ dialog.dialog-wide { width: min(64rem, calc(100% - 24px)); }
 
 .week {
   display: grid;
-  grid-template-columns: 6.5rem minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr);
   gap: 8px;
   align-items: center;
   margin: 8px 0;
+}
+
+.week .num { white-space: normal; }
+
+@media (min-width: 600px) {
+  .week { grid-template-columns: 6.5rem minmax(0, 1fr) auto; }
 }
 
 .week .bar {

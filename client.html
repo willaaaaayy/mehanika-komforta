@@ -15,11 +15,17 @@
       <img src="logo.jpg" alt="" width="96" height="96">
       <span>Механика Комфорта</span>
     </div>
-    <nav aria-label="Разделы">
+    <input class="nav-toggle" id="nav-toggle" type="checkbox">
+    <label class="menu" for="nav-toggle">Меню</label>
+    <nav id="crm-nav" aria-label="Разделы">
       <a href="leads.html">Заявки</a>
-      <a href="clients.html">Клиенты</a>
+      <a href="clients.html" aria-current="page">Клиенты</a>
       <a href="objects.html">Объекты</a>
       <a href="finance.html">Финансы</a>
+      <a href="payroll.html">Зарплаты</a>
+      <a href="suppliers.html">Поставщики</a>
+      <a href="pricelist.html">Прайс</a>
+      <a href="client-fields.html">Поля</a>
     </nav>
     <button class="btn btn-ghost bar-end" type="button" id="logout">Выйти</button>
   </header>
@@ -33,10 +39,12 @@
           <h1 id="card-title">Клиент</h1>
         </div>
         <div class="page-actions">
+          <button class="btn btn-primary" type="button" id="upload-contract">Загрузить договор</button>
           <button class="btn" type="button" id="unconvert">Вернуть в заявки</button>
           <button class="btn" type="button" id="archive">В архив</button>
         </div>
       </header>
+      <div class="metrics" id="client-metrics"></div>
       <div class="tabs" id="tabs" role="tablist">
         <a href="#" data-tab="overview">Обзор</a>
         <a href="#" data-tab="data">Данные</a>
