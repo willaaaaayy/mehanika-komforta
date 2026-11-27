@@ -2,6 +2,7 @@ import { api, bindLogout, requireOwner } from "./api.js";
 import { money } from "./format.js";
 import { contractBlock } from "./contract-upload.js";
 import { OBJECT_STATUSES, objectStatus } from "./object-status.js";
+import { renderPriceVersions } from "./price-versions.js";
 
 const params = new URLSearchParams(location.search);
 const id = Number(params.get("id"));
@@ -17,7 +18,7 @@ function sumText(value) {
 }
 
 function showTab(name) {
-  ["overview", "contracts", "payments", "costs"].forEach(function (key) {
+  ["overview", "contracts", "payments", "costs", "price"].forEach(function (key) {
     document.getElementById("panel-" + key).hidden = key !== name;
   });
   document.querySelectorAll("#tabs a").forEach(function (link) {
@@ -198,6 +199,7 @@ async function load() {
   object = await response.json();
   card.hidden = false;
   render();
+  await renderPriceVersions(document.getElementById("panel-price"), id);
   await loadLeadPhotos();
   showTab(tab);
 }
