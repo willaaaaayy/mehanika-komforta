@@ -1,6 +1,7 @@
 import { api, bindLogout, requireOwner } from "./api.js";
 import { money, telHref } from "./format.js";
 import { toast } from "./ui.js";
+import { contractBlock, openContractUpload } from "./contract-upload.js";
 
 const params = new URLSearchParams(location.search);
 const id = Number(params.get("id"));
@@ -232,9 +233,27 @@ async function load() {
     renderOverview();
     await loadPhotos();
     renderData();
-    renderList("panel-contracts", client.contracts, "Договоров пока нет.", function (item) {
-      return line(item.number || "Договор", sumText(item.amount));
+    const contracts = document.getElementById("panel-contracts");
+    contracts.replaceChildren();
+    const upload = document.createElement("button");
+    upload.type = "button";
+    upload.className = "btn btn-primary";
+    upload.textContent = "Загрузить договор";
+    upload.addEventListener("click", function () {
+      openContractUpload({ clientId: id, stay: true, onDone: function () { location.reload(); } });
     });
+    contracts.append(upload);
+    if (!client.contracts || !client.contracts.length) {
+      const empty = document.createElement("p");
+      empty.textContent = "Договоров пока нет.";
+      contracts.append(empty);
+    } else {
+      client.contracts.forEach(function (item) {
+        contracts.append(contractBlock(item, function (contractId) {
+          openContractUpload({ clientId: id, addendumOf: contractId, stay: true, onDone: function () { location.reload(); } });
+        }));
+      });
+    }
     renderList("panel-objects", client.objects, "Объектов пока нет.", function (item) {
       return line(item.address || "Объект", item.status || "");
     });

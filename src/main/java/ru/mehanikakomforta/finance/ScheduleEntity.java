@@ -48,6 +48,12 @@ class ScheduleEntity {
     @Column(nullable = false)
     private int position;
 
+    @Column(name = "due_basis", length = 16)
+    private String dueBasis;
+
+    @Column(name = "due_days")
+    private Integer dueDays;
+
     protected ScheduleEntity() {
     }
 
@@ -94,6 +100,19 @@ class ScheduleEntity {
 
     int getPosition() {
         return position;
+    }
+
+    String getDueBasis() {
+        return dueBasis;
+    }
+
+    Integer getDueDays() {
+        return dueDays;
+    }
+
+    void dueRule(String basis, Integer days) {
+        this.dueBasis = basis;
+        this.dueDays = days;
     }
 
     void replace(String title, BigDecimal amount, LocalDate dueOn, String kind, int position) {

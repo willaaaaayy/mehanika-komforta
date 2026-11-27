@@ -162,6 +162,16 @@ public class ClientEntity {
         }
     }
 
+    public void remember(String inn, String address) {
+        if ((this.inn == null || this.inn.isBlank()) && inn != null && !inn.isBlank()) {
+            this.inn = inn.trim();
+        }
+        if ((this.address == null || this.address.isBlank()) && address != null && !address.isBlank()) {
+            String trimmed = address.trim();
+            this.address = trimmed.length() <= 300 ? trimmed : trimmed.substring(0, 300);
+        }
+    }
+
     public void archive() {
         this.status = "archived";
     }

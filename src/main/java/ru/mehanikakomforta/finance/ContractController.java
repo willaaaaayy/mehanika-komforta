@@ -25,7 +25,6 @@ import java.time.temporal.WeekFields;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 
 @RestController
@@ -34,11 +33,13 @@ class ContractController {
 
     private final ContractRepository contracts;
     private final ScheduleRepository schedule;
+    private final ContractLinks links;
     private final CrmProperties properties;
 
-    ContractController(ContractRepository contracts, ScheduleRepository schedule, CrmProperties properties) {
+    ContractController(ContractRepository contracts, ScheduleRepository schedule, ContractLinks links, CrmProperties properties) {
         this.contracts = contracts;
         this.schedule = schedule;
+        this.links = links;
         this.properties = properties;
     }
 
@@ -51,12 +52,13 @@ class ContractController {
             @RequestParam(required = false) String mode
     ) {
         List<ContractEntity> rows = contracts.findByConfirmedTrueOrderByCreatedAtDesc().stream()
-                .filter(item -> client == null || client.isBlank() || item.getClientName().equals(client))
+                .filter(item -> sameClient(item, client))
                 .filter(item -> object == null || object.isBlank() || object.equals(item.getObjectAddress()))
                 .toList();
         Map<String, List<ContractEntity>> grouped = new LinkedHashMap<>();
         for (ContractEntity row : rows) {
-            grouped.computeIfAbsent(row.getClientName(), key -> new ArrayList<>()).add(row);
+            String key = row.getClientId() == null ? row.getClientName() : String.valueOf(row.getClientId());
+            grouped.computeIfAbsent(key, ignored -> new ArrayList<>()).add(row);
         }
         List<FinanceView.ClientRow> clients = new ArrayList<>();
         BigDecimal receivable = BigDecimal.ZERO;
@@ -86,7 +88,7 @@ class ContractController {
                     if (late) {
                         overdue = overdue.add(step.getAmount());
                         attention.add(new FinanceView.Attention(
-                                contract.getClientName(),
+                                contract.getClientId() == null ? contract.getClientName() : String.valueOf(contract.getClientId()),
                                 step.getTitle(),
                                 step.getAmount(),
                                 (int) (today.toEpochDay() - step.getDueOn().toEpochDay())
@@ -109,9 +111,11 @@ class ContractController {
             }
             BigDecimal due = amount.subtract(paid);
             receivable = receivable.add(due.max(BigDecimal.ZERO));
+            ContractEntity first = entry.getValue().get(0);
+            String shownId = first.getClientId() == null ? first.getClientName() : String.valueOf(first.getClientId());
             clients.add(new FinanceView.ClientRow(
-                    entry.getKey(),
-                    entry.getKey(),
+                    shownId,
+                    first.getClientName(),
                     entry.getValue().size(),
                     amount,
                     null,
@@ -134,25 +138,47 @@ class ContractController {
     }
 
     @PostMapping(value = "/api/contracts", consumes = "multipart/form-data")
-    ResponseEntity<?> upload(@RequestParam(value = "file", required = false) MultipartFile file) throws IOException {
-        String filename = file == null || file.getOriginalFilename() == null ? "" : file.getOriginalFilename().toLowerCase(Locale.ROOT);
-        if (file == null || file.isEmpty() || !(filename.endsWith(".docx") || filename.endsWith(".pdf"))) {
+    ResponseEntity<?> upload(
+            @RequestParam(value = "file", required = false) MultipartFile file,
+            @RequestParam(required = false) Long clientId,
+            @RequestParam(required = false) Long leadId,
+            @RequestParam(required = false) Long addendumOf
+    ) throws IOException {
+        if (file == null || file.isEmpty()) {
             return ResponseEntity.badRequest().body(new ApiError("contract"));
         }
-        ContractText.Read read = ContractText.read(file.getBytes());
+        byte[] bytes = file.getBytes();
+        if (!isPdf(bytes) && !isDocx(bytes)) {
+            return ResponseEntity.badRequest().body(new ApiError("contract"));
+        }
+        ContractText.Read read = ContractText.read(bytes);
         if (read == null) {
             return ResponseEntity.badRequest().body(new ApiError("contract"));
+        }
+        if (addendumOf != null || read.addendum()) {
+            ContractEntity base = addendumOf == null
+                    ? contracts.findByNumber(read.number()).orElse(null)
+                    : contracts.findById(addendumOf).orElse(null);
+            if (base == null || !base.isConfirmed()) {
+                return ResponseEntity.badRequest().body(new ApiError("contract"));
+            }
+            Files.createDirectories(Path.of(properties.contractDir()));
+            Files.write(Path.of(properties.contractDir(), base.getId() + "-addendum"), bytes);
+            return ResponseEntity.ok(draft(base, read, true));
         }
         if (contracts.findByNumber(read.number()).isPresent()) {
             return ResponseEntity.status(HttpStatus.CONFLICT).body(new ApiError("duplicate"));
         }
-        ContractEntity contract = new ContractEntity(Instant.now(), read.number(), file.getOriginalFilename());
+        String original = file.getOriginalFilename() == null ? "dogovor" : file.getOriginalFilename();
+        ContractEntity contract = new ContractEntity(Instant.now(), read.number(), original);
         contract.fill(read.number(), read.client(), read.inn(), read.objectAddress(), read.amount(), false);
+        contract.details(null, read.subject(), read.vat(), read.kpp(), read.ogrn(), read.clientAddress(), read.signatory());
+        contract.linked(clientId, null, leadId);
         contract.replaceSchedule(rows(contract, read.schedule()));
         ContractEntity saved = contracts.save(contract);
         Files.createDirectories(Path.of(properties.contractDir()));
-        Files.write(Path.of(properties.contractDir(), String.valueOf(saved.getId())), file.getBytes());
-        return ResponseEntity.status(HttpStatus.CREATED).body(draft(saved));
+        Files.write(Path.of(properties.contractDir(), String.valueOf(saved.getId())), bytes);
+        return ResponseEntity.status(HttpStatus.CREATED).body(draft(saved, read, false));
     }
 
     @PostMapping(value = "/api/contracts", consumes = "application/json")
@@ -166,7 +192,8 @@ class ContractController {
         }
         ContractEntity contract = new ContractEntity(Instant.now(), body.number().trim(), "вручную");
         apply(contract, body, true);
-        return ResponseEntity.status(HttpStatus.CREATED).body(draft(contracts.save(contract)));
+        links.place(contracts.save(contract), body.clientId(), body.leadId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(draft(contract, null, false));
     }
 
     @PatchMapping("/api/contracts/{id}")
@@ -185,7 +212,10 @@ class ContractController {
         }
         ContractEntity contract = found.get();
         apply(contract, body, true);
-        return ResponseEntity.ok(draft(contracts.save(contract)));
+        Long clientId = body.clientId() != null ? body.clientId() : contract.getClientId();
+        Long leadId = body.leadId() != null ? body.leadId() : contract.getLeadId();
+        links.place(contracts.save(contract), clientId, leadId);
+        return ResponseEntity.ok(draft(contract, null, false));
     }
 
     @PostMapping("/api/contracts/{id}/payments")
@@ -203,7 +233,7 @@ class ContractController {
         }
         step.get().pay(body.amount(), body.date(), body.method());
         schedule.save(step.get());
-        return ResponseEntity.ok(draft(found.get()));
+        return ResponseEntity.ok(draft(found.get(), null, false));
     }
 
     private static boolean inPeriod(LocalDate date, LocalDate from, LocalDate to) {
@@ -229,16 +259,41 @@ class ContractController {
         return null;
     }
 
+    private static boolean sameClient(ContractEntity item, String client) {
+        if (client == null || client.isBlank()) {
+            return true;
+        }
+        if (client.equals(item.getClientName())) {
+            return true;
+        }
+        return item.getClientId() != null && client.equals(String.valueOf(item.getClientId()));
+    }
+
+    private static boolean isPdf(byte[] bytes) {
+        return bytes.length > 4 && bytes[0] == '%' && bytes[1] == 'P' && bytes[2] == 'D' && bytes[3] == 'F';
+    }
+
+    private static boolean isDocx(byte[] bytes) {
+        return bytes.length > 4 && bytes[0] == 'P' && bytes[1] == 'K';
+    }
+
     private static void apply(ContractEntity contract, ConfirmBody body, boolean confirmed) {
         contract.fill(
                 body.number().trim(),
                 body.client().name().trim(),
-                body.client().inn() == null || body.client().inn().isBlank() ? null : body.client().inn().trim(),
-                body.object() == null || body.object().address() == null || body.object().address().isBlank()
-                        ? null
-                        : body.object().address().trim(),
+                blank(body.client().inn()),
+                body.object() == null ? null : blank(body.object().address()),
                 body.amount(),
                 confirmed
+        );
+        contract.details(
+                date(body.date()),
+                blank(body.subject()),
+                body.vat(),
+                blank(body.client().kpp()),
+                blank(body.client().ogrn()),
+                blank(body.client().address()),
+                blank(body.client().signatory())
         );
         List<ScheduleEntity> rows = new ArrayList<>();
         List<ConfirmBody.Row> source = body.schedule() == null ? List.of() : body.schedule();
@@ -248,7 +303,18 @@ class ContractController {
                 continue;
             }
             String kind = row.kind() == null || row.kind().isBlank() ? "stage" : row.kind();
-            rows.add(new ScheduleEntity(contract, row.title() == null || row.title().isBlank() ? "Платёж" : row.title().trim(), row.amount(), row.due(), kind, i));
+            ScheduleEntity step = new ScheduleEntity(
+                    contract,
+                    row.title() == null || row.title().isBlank() ? "Платёж" : row.title().trim(),
+                    row.amount(),
+                    row.due(),
+                    kind,
+                    i
+            );
+            if (row.due() == null && row.dueRule() != null && "act".equals(row.dueRule().basis())) {
+                step.dueRule("act", row.dueRule().businessDays());
+            }
+            rows.add(step);
         }
         contract.replaceSchedule(rows);
     }
@@ -257,46 +323,244 @@ class ContractController {
         List<ScheduleEntity> rows = new ArrayList<>();
         for (int i = 0; i < source.size(); i++) {
             ContractText.Row row = source.get(i);
-            rows.add(new ScheduleEntity(contract, row.title(), row.amount(), null, row.kind(), i));
+            ScheduleEntity step = new ScheduleEntity(contract, row.title(), row.amount(), null, row.kind(), i);
+            if (row.dueBasis() != null) {
+                step.dueRule(row.dueBasis(), row.dueDays());
+            }
+            rows.add(step);
         }
         return rows;
     }
 
-    private static Draft draft(ContractEntity contract) {
+    private static Draft draft(ContractEntity contract, ContractText.Read read, boolean compare) {
+        List<Draft.Step> steps = new ArrayList<>();
+        if (compare && read != null) {
+            for (ContractText.Row row : read.schedule()) {
+                steps.add(new Draft.Step(null, row.title(), row.amount(), null, row.kind(), rule(row.dueBasis(), row.dueDays())));
+            }
+        } else {
+            for (ScheduleEntity row : contract.getSchedule()) {
+                steps.add(new Draft.Step(
+                        row.getId(),
+                        row.getTitle(),
+                        row.getAmount(),
+                        row.getDueOn(),
+                        row.getKind(),
+                        rule(row.getDueBasis(), row.getDueDays())
+                ));
+            }
+        }
+        Draft.Party party = compare && read != null
+                ? new Draft.Party(read.client(), read.inn(), read.kpp(), read.ogrn(), read.clientAddress(), read.signatory())
+                : new Draft.Party(contract.getClientName(), contract.getClientInn(), contract.getClientKpp(), contract.getClientOgrn(), contract.getClientAddress(), contract.getSignatory());
+        String address = compare && read != null ? read.objectAddress() : contract.getObjectAddress();
         return new Draft(
                 contract.getId(),
-                contract.getNumber(),
-                contract.getAmount(),
-                new Draft.Party(contract.getClientName(), contract.getClientInn()),
-                new Draft.Place(contract.getObjectAddress()),
-                contract.getSchedule().stream()
-                        .map(row -> new Draft.Step(row.getId(), row.getTitle(), row.getAmount(), row.getDueOn(), row.getKind()))
-                        .toList()
+                compare && read != null ? read.number() : contract.getNumber(),
+                read == null ? null : read.date(),
+                compare && read != null ? read.subject() : contract.getSubject(),
+                compare && read != null ? read.amount() : contract.getAmount(),
+                compare && read != null ? read.vat() : contract.getVat(),
+                false,
+                read == null ? null : read.paragraphs(),
+                contract.isConfirmed() ? contract.getClientId() : null,
+                party,
+                new Draft.Place(address),
+                steps,
+                compare ? new Draft.Compare(
+                        new Draft.MoneyChange(contract.getAmount(), read == null ? contract.getAmount() : read.amount()),
+                        new Draft.TextChange(scheduleText(contract), scheduleText(read))
+                ) : null,
+                confidence(read),
+                source(read)
         );
     }
 
-    record ConfirmBody(String number, BigDecimal amount, Party client, Place object, List<Row> schedule) {
-        record Party(String name, String inn) {
+    private static Draft.Rule rule(String basis, Integer days) {
+        return basis == null ? null : new Draft.Rule(basis, days);
+    }
+
+    private static String scheduleText(ContractEntity contract) {
+        StringBuilder text = new StringBuilder();
+        for (ScheduleEntity step : contract.getSchedule()) {
+            if (!text.isEmpty()) {
+                text.append("; ");
+            }
+            text.append(step.getTitle()).append(' ');
+            text.append(step.getDueOn() != null ? step.getDueOn() : actText(step.getDueBasis(), step.getDueDays()));
+        }
+        return text.toString();
+    }
+
+    private static String scheduleText(ContractText.Read read) {
+        if (read == null) {
+            return "";
+        }
+        StringBuilder text = new StringBuilder();
+        for (ContractText.Row row : read.schedule()) {
+            if (!text.isEmpty()) {
+                text.append("; ");
+            }
+            text.append(row.title()).append(' ').append(actText(row.dueBasis(), row.dueDays()));
+        }
+        return text.toString();
+    }
+
+    private static String actText(String basis, Integer days) {
+        if (!"act".equals(basis)) {
+            return "—";
+        }
+        return days == null ? "по акту" : "по акту, " + days + " банк. дн.";
+    }
+
+    private static Map<String, String> confidence(ContractText.Read read) {
+        if (read == null) {
+            return null;
+        }
+        Map<String, String> marks = new LinkedHashMap<>();
+        marks.put("number", "high");
+        marks.put("date", "none");
+        marks.put("subject", read.subject() == null ? "none" : "high");
+        marks.put("amount", "high");
+        marks.put("vat", read.vat() == null ? "none" : "high");
+        marks.put("client.name", "high");
+        marks.put("client.inn", read.inn() == null ? "none" : "high");
+        marks.put("client.kpp", read.kpp() == null ? "none" : "high");
+        marks.put("client.ogrn", read.ogrn() == null ? "none" : "high");
+        marks.put("client.address", read.clientAddress() == null ? "none" : "high");
+        marks.put("client.signatory", read.signatory() == null ? "none" : "check");
+        marks.put("object.address", read.objectAddress() == null ? "none" : "high");
+        for (int i = 0; i < read.schedule().size(); i++) {
+            marks.put("schedule." + i + ".amount", "high");
+        }
+        return marks;
+    }
+
+    private static Map<String, Draft.Source> source(ContractText.Read read) {
+        if (read == null) {
+            return null;
+        }
+        Map<String, Draft.Source> marks = new LinkedHashMap<>();
+        mark(marks, read.paragraphs(), "number", read.number());
+        mark(marks, read.paragraphs(), "subject", read.subject() == null ? null : read.subject().substring(0, Math.min(24, read.subject().length())));
+        markAmount(marks, read);
+        mark(marks, read.paragraphs(), "client.name", read.client());
+        mark(marks, read.paragraphs(), "client.inn", read.inn());
+        mark(marks, read.paragraphs(), "object.address", read.objectAddress() == null ? null : "на объекте");
+        return marks;
+    }
+
+    private static void markAmount(Map<String, Draft.Source> marks, ContractText.Read read) {
+        if (read.amount() == null || read.paragraphs() == null) {
+            return;
+        }
+        String digits = read.amount().stripTrailingZeros().toPlainString();
+        for (int i = 0; i < read.paragraphs().size(); i++) {
+            String folded = read.paragraphs().get(i).replace(" ", "").replace("\u00A0", "");
+            if (folded.contains(digits)) {
+                marks.put("amount", new Draft.Source(i, null));
+                return;
+            }
+        }
+    }
+
+    private static void mark(Map<String, Draft.Source> marks, List<String> paragraphs, String key, String snippet) {
+        if (snippet == null || paragraphs == null) {
+            return;
+        }
+        for (int i = 0; i < paragraphs.size(); i++) {
+            if (paragraphs.get(i).contains(snippet)) {
+                marks.put(key, new Draft.Source(i, null));
+                return;
+            }
+        }
+    }
+
+    private static LocalDate date(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(value.trim());
+        } catch (Exception exception) {
+            return null;
+        }
+    }
+
+    private static String blank(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
+    }
+
+    record ConfirmBody(
+            String number,
+            BigDecimal amount,
+            String date,
+            String subject,
+            BigDecimal vat,
+            Long clientId,
+            Long leadId,
+            Party client,
+            Place object,
+            List<Row> schedule
+    ) {
+        record Party(String name, String inn, String kpp, String ogrn, String address, String signatory) {
         }
 
         record Place(String address) {
         }
 
-        record Row(String title, BigDecimal amount, LocalDate due, String kind) {
+        record Row(String title, BigDecimal amount, LocalDate due, String kind, DueRule dueRule) {
+        }
+
+        record DueRule(String basis, Integer businessDays) {
         }
     }
 
     record PayBody(Long scheduleId, BigDecimal amount, LocalDate date, String method) {
     }
 
-    record Draft(Long id, String number, BigDecimal amount, Party client, Place object, List<Step> schedule) {
-        record Party(String name, String inn) {
+    record Draft(
+            Long id,
+            String number,
+            String date,
+            String subject,
+            BigDecimal amount,
+            BigDecimal vat,
+            boolean scan,
+            List<String> paragraphs,
+            Long clientId,
+            Party client,
+            Place object,
+            List<Step> schedule,
+            Compare compare,
+            Map<String, String> confidence,
+            Map<String, Source> source
+    ) {
+        record Party(String name, String inn, String kpp, String ogrn, String address, String signatory) {
         }
 
         record Place(String address) {
         }
 
-        record Step(Long id, String title, BigDecimal amount, LocalDate due, String kind) {
+        record Step(Long id, String title, BigDecimal amount, LocalDate due, String kind, Rule dueRule) {
+        }
+
+        record Rule(String basis, Integer businessDays) {
+        }
+
+        record Compare(MoneyChange amount, TextChange schedule) {
+        }
+
+        record MoneyChange(BigDecimal was, BigDecimal now) {
+        }
+
+        record TextChange(String was, String now) {
+        }
+
+        record Source(Integer paragraph, Integer page) {
         }
     }
 }

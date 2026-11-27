@@ -47,6 +47,36 @@ class ContractEntity {
     @Column(nullable = false)
     private boolean confirmed;
 
+    @Column(name = "client_id")
+    private Long clientId;
+
+    @Column(name = "lead_id")
+    private Long leadId;
+
+    @Column(name = "object_id")
+    private Long objectId;
+
+    @Column(name = "signed_on")
+    private java.time.LocalDate signedOn;
+
+    @Column(length = 500)
+    private String subject;
+
+    @Column(precision = 14, scale = 2)
+    private java.math.BigDecimal vat;
+
+    @Column(name = "client_kpp", length = 12)
+    private String clientKpp;
+
+    @Column(name = "client_ogrn", length = 15)
+    private String clientOgrn;
+
+    @Column(name = "client_address", length = 300)
+    private String clientAddress;
+
+    @Column(length = 200)
+    private String signatory;
+
     @OneToMany(mappedBy = "contract", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("position")
     private List<ScheduleEntity> schedule = new ArrayList<>();
@@ -88,6 +118,64 @@ class ContractEntity {
 
     boolean isConfirmed() {
         return confirmed;
+    }
+
+    Long getClientId() {
+        return clientId;
+    }
+
+    Long getLeadId() {
+        return leadId;
+    }
+
+    Long getObjectId() {
+        return objectId;
+    }
+
+    java.time.LocalDate getSignedOn() {
+        return signedOn;
+    }
+
+    String getSubject() {
+        return subject;
+    }
+
+    java.math.BigDecimal getVat() {
+        return vat;
+    }
+
+    String getClientKpp() {
+        return clientKpp;
+    }
+
+    String getClientOgrn() {
+        return clientOgrn;
+    }
+
+    String getClientAddress() {
+        return clientAddress;
+    }
+
+    String getSignatory() {
+        return signatory;
+    }
+
+    void details(java.time.LocalDate signedOn, String subject, java.math.BigDecimal vat, String kpp, String ogrn, String address, String signatory) {
+        this.signedOn = signedOn;
+        this.subject = subject;
+        this.vat = vat;
+        this.clientKpp = kpp;
+        this.clientOgrn = ogrn;
+        this.clientAddress = address;
+        this.signatory = signatory;
+    }
+
+    void linked(Long clientId, Long objectId, Long leadId) {
+        this.clientId = clientId;
+        this.objectId = objectId;
+        if (leadId != null) {
+            this.leadId = leadId;
+        }
     }
 
     List<ScheduleEntity> getSchedule() {

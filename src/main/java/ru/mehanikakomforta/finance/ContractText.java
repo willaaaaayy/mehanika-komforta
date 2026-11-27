@@ -13,26 +13,58 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipInputStream;
 
-final class ContractText {
+public final class ContractText {
 
     private ContractText() {
     }
 
-    record Row(String title, BigDecimal amount, String kind) {
+    public record Row(String title, BigDecimal amount, String kind, String dueBasis, Integer dueDays) {
     }
 
-    record Read(String number, String client, String inn, String objectAddress, BigDecimal amount, List<Row> schedule) {
+    public record Read(
+            String number,
+            String date,
+            String subject,
+            String client,
+            String inn,
+            String kpp,
+            String ogrn,
+            String clientAddress,
+            String signatory,
+            String objectAddress,
+            BigDecimal amount,
+            BigDecimal vat,
+            List<Row> schedule,
+            List<String> paragraphs,
+            boolean addendum
+    ) {
     }
 
-    static Read read(byte[] bytes) {
+    public static Read read(byte[] bytes) {
         String text = isPdf(bytes) ? pdf(bytes) : text(bytes);
         if (text == null || text.isBlank()) {
             return null;
         }
+        List<String> paragraphs = new ArrayList<>();
+        for (String line : text.split("\\R")) {
+            if (!line.isBlank()) {
+                paragraphs.add(line.trim());
+            }
+        }
+        String head = paragraphs.stream().limit(3).reduce("", (left, right) -> left + "\n" + right).toLowerCase(java.util.Locale.ROOT);
+        boolean addendum = head.contains("дополнительное соглашение") || head.contains("допсоглашение");
         String number = first(text, "ДОГОВОР\\s*№\\s*([0-9]+(?:-[0-9]+)*)");
+        if (number == null && addendum) {
+            number = first(text, "к договору\\s*№\\s*([0-9]+(?:-[0-9]+)*)");
+        }
         String clientBlock = between(text, "ЗАКАЗЧИК", "ПОДРЯДЧИК");
-        String client = clientBlock == null ? null : lineAfter(clientBlock, "ЗАКАЗЧИК");
+        String client = preambleClient(text);
+        if (client == null && clientBlock != null) {
+            client = lineAfter(clientBlock, "ЗАКАЗЧИК");
+        }
         String inn = clientBlock == null ? null : first(clientBlock, "ИНН\\s*(\\d{10,12})");
+        String kpp = clientBlock == null ? null : first(clientBlock, "КПП\\s*(\\d{9})");
+        String ogrn = clientBlock == null ? null : first(clientBlock, "ОГРН\\s*(\\d{13,15})");
         String objectAddress = objectAddress(text);
         BigDecimal amount = moneyAfter(text, "ориентировочн\\p{L}*\\s+стоимост\\p{L}*\\s+работ\\s+составляет");
         if (amount == null) {
@@ -42,14 +74,62 @@ final class ContractText {
             return null;
         }
         BigDecimal advance = moneyAfter(text, "авансов\\p{L}*\\s+платеж");
+        boolean byAct = text.toLowerCase(java.util.Locale.ROOT).contains("кс-2")
+                && text.toLowerCase(java.util.Locale.ROOT).contains("30 банковск");
         List<Row> schedule = new ArrayList<>();
         if (advance != null) {
-            schedule.add(new Row("Аванс", advance, "advance"));
-            schedule.add(new Row("Окончательный расчёт", amount.subtract(advance), "final"));
+            schedule.add(new Row("Аванс", advance, "advance", null, null));
+            schedule.add(new Row("Окончательный расчёт", amount.subtract(advance), "final", byAct ? "act" : null, byAct ? 30 : null));
         } else {
-            schedule.add(new Row("Оплата по договору", amount, "final"));
+            schedule.add(new Row("Оплата по договору", amount, "final", byAct ? "act" : null, byAct ? 30 : null));
         }
-        return new Read(number, client, inn, objectAddress, amount, schedule);
+        String subject = paragraphs.stream().filter(line -> line.startsWith("1.1.")).findFirst().orElse(null);
+        if (subject != null && subject.length() > 300) {
+            subject = subject.substring(0, 300).trim();
+        }
+        BigDecimal vat = text.toLowerCase(java.util.Locale.ROOT).contains("ндс не облагается") ? BigDecimal.ZERO : null;
+        return new Read(
+                number,
+                null,
+                subject,
+                client,
+                inn,
+                kpp,
+                ogrn,
+                null,
+                signatory(text),
+                objectAddress,
+                amount,
+                vat,
+                schedule,
+                paragraphs,
+                addendum
+        );
+    }
+
+    private static String preambleClient(String text) {
+        for (String line : text.split("\\R")) {
+            int mark = line.toLowerCase(java.util.Locale.ROOT).indexOf("именуем");
+            if (mark < 0 || !line.contains("Заказчик")) {
+                continue;
+            }
+            int comma = line.lastIndexOf(',', mark);
+            if (comma > 10) {
+                return line.substring(0, comma).trim();
+            }
+        }
+        return null;
+    }
+
+    private static String signatory(String text) {
+        java.util.regex.Matcher matcher = java.util.regex.Pattern
+                .compile("([А-ЯЁ]\\.[А-ЯЁ]\\.)\\s*([А-ЯЁ][а-яё]+)")
+                .matcher(text);
+        String found = null;
+        while (matcher.find()) {
+            found = matcher.group(2) + " " + matcher.group(1);
+        }
+        return found;
     }
 
     private static boolean isPdf(byte[] bytes) {

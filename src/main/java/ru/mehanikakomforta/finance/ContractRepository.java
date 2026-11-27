@@ -10,4 +10,8 @@ interface ContractRepository extends JpaRepository<ContractEntity, Long> {
     Optional<ContractEntity> findByNumber(String number);
 
     List<ContractEntity> findByConfirmedTrueOrderByCreatedAtDesc();
+
+    List<ContractEntity> findByClientIdAndConfirmedTrueOrderByCreatedAtDesc(Long clientId);
+
+    long countByClientIdAndConfirmedTrue(Long clientId);
 }

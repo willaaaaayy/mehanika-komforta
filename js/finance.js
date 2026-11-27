@@ -1,6 +1,7 @@
 import { api, bindLogout, requireOwner } from "./api.js";
 import { money } from "./format.js";
 import { setBusy } from "./ui.js";
+import { openContractUpload } from "./contract-upload.js";
 
 const params = new URLSearchParams(location.search);
 const tab = params.get("tab") || "";
@@ -534,13 +535,7 @@ function fillReview(draft) {
 }
 
 function openUpload() {
-  uploadStatus.hidden = true;
-  review.hidden = true;
-  create.disabled = true;
-  draftId = null;
-  fileInput.value = "";
-  document.getElementById("file-note").textContent = "";
-  upload.showModal();
+  openContractUpload({ onDone: function () { load(); } });
 }
 
 async function sendFile(file) {

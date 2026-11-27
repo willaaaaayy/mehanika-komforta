@@ -2,6 +2,7 @@ import { api, bindLogout, errorCode, requireOwner } from "./api.js";
 import { CONDITIONS, digits, GRADES, money, PACKAGES, shortWhen, SOURCES, stageMeta, STAGES, telHref, yearsLabel } from "./format.js";
 import { clearErrors, fieldError, setBusy, toast } from "./ui.js";
 import { offerConvert, openConvert } from "./convert.js";
+import { openContractUpload } from "./contract-upload.js";
 
 const params = new URLSearchParams(location.search);
 const id = Number(params.get("id"));
@@ -442,6 +443,10 @@ async function goList() {
 document.getElementById("editor").addEventListener("input", markDirty);
 document.getElementById("editor").addEventListener("change", markDirty);
 document.getElementById("save").addEventListener("click", save);
+document.getElementById("contract-open").addEventListener("click", function () {
+  if (!lead) return;
+  openContractUpload({ leadId: lead.id, clientId: lead.clientId || null });
+});
 document.getElementById("convert-open").addEventListener("click", function () {
   if (!lead) return;
   if (lead.clientId) location.href = "client.html?id=" + lead.clientId;

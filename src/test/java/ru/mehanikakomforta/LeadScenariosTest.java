@@ -7,6 +7,7 @@ import org.apache.pdfbox.pdmodel.PDPageContentStream;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.junit.jupiter.api.Test;
+import ru.mehanikakomforta.finance.ContractText;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
@@ -505,18 +506,32 @@ class LeadScenariosTest {
         mvc.perform(get("/api/finance").session(session(login)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.clients").isEmpty());
-        mvc.perform(patch("/api/contracts/" + id)
+        MvcResult confirmed = mvc.perform(patch("/api/contracts/" + id)
                         .session(session(login))
                         .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(uploaded.getResponse().getContentAsString()))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.clientId").isNumber())
+                .andReturn();
+        String clientId = confirmed.getResponse().getContentAsString().replaceFirst(".*?\"clientId\":(\\d+).*", "$1");
         mvc.perform(get("/api/finance").session(session(login)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totals.receivable").value(1062500))
                 .andExpect(jsonPath("$.totals.payable").doesNotExist())
+                .andExpect(jsonPath("$.clients[0].id").value(clientId))
                 .andExpect(jsonPath("$.clients[0].name").value("ООО СЗ ГК «Кронверк»"))
                 .andExpect(jsonPath("$.clients[0].items[0].object").value(org.hamcrest.Matchers.containsString("этаж 17")));
+        mvc.perform(get("/api/clients/" + clientId).session(session(login)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contracts[0].number").value("11-10-1-69"))
+                .andExpect(jsonPath("$.contracts[0].schedule[1].amount").value(531250))
+                .andExpect(jsonPath("$.objects[0].address").value(org.hamcrest.Matchers.containsString("этаж 17")))
+                .andExpect(jsonPath("$.due").value(1062500));
+        mvc.perform(get("/api/finance").param("client", clientId).session(session(login)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.clients[0].amount").value(1062500))
+                .andExpect(jsonPath("$.totals.receivable").value(1062500));
         byte[] pdf;
         try (org.apache.pdfbox.pdmodel.PDDocument document = new org.apache.pdfbox.pdmodel.PDDocument()) {
             org.apache.pdfbox.pdmodel.PDPage page = new org.apache.pdfbox.pdmodel.PDPage();
@@ -622,6 +637,25 @@ class LeadScenariosTest {
         mvc.perform(get("/api/leads").session(session(login)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[?(@.name=='Клиент')].stage").value("new"));
+    }
+
+    @Test
+    void kainovContractKeepsTheActRule() throws Exception {
+        String sample = System.getProperty("contract.sample", "");
+        org.junit.jupiter.api.Assumptions.assumeTrue(sample != null && !sample.isBlank() && java.nio.file.Files.isRegularFile(java.nio.file.Path.of(sample)));
+        ContractText.Read read = ContractText.read(java.nio.file.Files.readAllBytes(java.nio.file.Path.of(sample)));
+        org.junit.jupiter.api.Assertions.assertNotNull(read);
+        org.junit.jupiter.api.Assertions.assertEquals("11-10-1-69", read.number());
+        org.junit.jupiter.api.Assertions.assertTrue(read.client().contains("Кронверк"));
+        org.junit.jupiter.api.Assertions.assertEquals("6450096705", read.inn());
+        org.junit.jupiter.api.Assertions.assertEquals(0, new java.math.BigDecimal("1062500").compareTo(read.amount()));
+        org.junit.jupiter.api.Assertions.assertEquals(0, java.math.BigDecimal.ZERO.compareTo(read.vat()));
+        org.junit.jupiter.api.Assertions.assertTrue(read.objectAddress().toLowerCase().contains("солнеч"));
+        org.junit.jupiter.api.Assertions.assertEquals("advance", read.schedule().get(0).kind());
+        org.junit.jupiter.api.Assertions.assertEquals(0, new java.math.BigDecimal("531250").compareTo(read.schedule().get(0).amount()));
+        org.junit.jupiter.api.Assertions.assertNull(read.schedule().get(0).dueBasis());
+        org.junit.jupiter.api.Assertions.assertEquals("act", read.schedule().get(1).dueBasis());
+        org.junit.jupiter.api.Assertions.assertEquals(30, read.schedule().get(1).dueDays());
     }
 
     private static MockHttpSession session(MvcResult result) {

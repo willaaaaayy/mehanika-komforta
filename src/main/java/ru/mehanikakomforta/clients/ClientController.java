@@ -28,11 +28,18 @@ public class ClientController {
     private final ClientRepository clients;
     private final ClientEventRepository events;
     private final LeadRepository leads;
+    private final ru.mehanikakomforta.finance.ContractLinks links;
 
-    public ClientController(ClientRepository clients, ClientEventRepository events, LeadRepository leads) {
+    public ClientController(
+            ClientRepository clients,
+            ClientEventRepository events,
+            LeadRepository leads,
+            ru.mehanikakomforta.finance.ContractLinks links
+    ) {
         this.clients = clients;
         this.events = events;
         this.leads = leads;
+        this.links = links;
     }
 
     @GetMapping("/api/clients")
@@ -166,6 +173,9 @@ public class ClientController {
         }
         LeadEntity lead = found.get();
         Long clientId = lead.getClientId();
+        if (links.hasContract(clientId)) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(new ApiError("contracts"));
+        }
         lead.clearConversion();
         leads.save(lead);
         clients.findById(clientId).ifPresent(client -> {
@@ -183,6 +193,7 @@ public class ClientController {
         if (client.getSourceLeadId() != null) {
             lead = leads.findById(client.getSourceLeadId()).map(LeadResponse::from).orElse(null);
         }
+        var money = links.money(client.getId());
         return new ClientPage(
                 client.getId(),
                 client.getType(),
@@ -193,12 +204,12 @@ public class ClientController {
                 client.getAddress(),
                 client.getStatus(),
                 client.getSourceLeadId(),
-                null,
-                null,
-                null,
-                null,
-                List.of(),
-                List.of(),
+                money.amount(),
+                money.paid(),
+                money.due(),
+                money.overdue(),
+                links.cards(client.getId()),
+                links.sites(client.getId()),
                 events.findByClientIdOrderByAtDesc(client.getId()).stream()
                         .map(event -> new HistoryLine(event.getAt().toString(), historyText(event.getAction())))
                         .toList(),
@@ -212,11 +223,13 @@ public class ClientController {
             case "merge" -> "Заявка объединена с клиентом";
             case "edit" -> "Карточка изменена";
             case "unconvert" -> "Клиент возвращён в заявки";
+            case "contract" -> "Договор записан в карточку";
             default -> action;
         };
     }
 
     private ClientView view(ClientEntity client) {
+        var money = links.money(client.getId());
         return new ClientView(
                 client.getId(),
                 client.getType(),
@@ -226,11 +239,12 @@ public class ClientController {
                 client.getInn(),
                 client.getStatus(),
                 client.getSourceLeadId(),
-                null,
-                null,
-                null,
-                null,
-                null
+                money.contracts(),
+                money.amount(),
+                money.paid(),
+                money.due(),
+                money.overdue(),
+                money.next()
         );
     }
 
@@ -307,7 +321,8 @@ public class ClientController {
             java.math.BigDecimal amount,
             java.math.BigDecimal paid,
             java.math.BigDecimal due,
-            java.math.BigDecimal overdue
+            java.math.BigDecimal overdue,
+            ru.mehanikakomforta.finance.ContractLinks.Next nextPayment
     ) {
     }
 
@@ -325,8 +340,8 @@ public class ClientController {
             java.math.BigDecimal paid,
             java.math.BigDecimal due,
             java.math.BigDecimal overdue,
-            List<Object> contracts,
-            List<Object> objects,
+            List<ru.mehanikakomforta.finance.ContractLinks.Card> contracts,
+            List<ru.mehanikakomforta.finance.ContractLinks.Site> objects,
             List<HistoryLine> history,
             LeadResponse lead
     ) {
