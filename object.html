@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <title>Объект — Механика Комфорта</title>
+  <link rel="icon" href="logo.jpg" type="image/jpeg">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <a class="skip" href="#main">К содержанию</a>
+  <header class="bar">
+    <div class="brand">
+      <img src="logo.jpg" alt="" width="96" height="96">
+      <span>Механика Комфорта</span>
+    </div>
+    <nav aria-label="Разделы">
+      <a href="clients.html">Клиенты</a>
+      <a href="objects.html">Объекты</a>
+      <a href="finance.html">Финансы</a>
+    </nav>
+    <button class="btn btn-ghost bar-end" type="button" id="logout">Выйти</button>
+  </header>
+  <main class="wrap" id="main">
+    <p class="banner" id="banner" role="alert" hidden></p>
+    <div class="skeleton" id="skeleton" aria-hidden="true"><span></span><span></span></div>
+    <article id="card" hidden>
+      <header class="lead-bar">
+        <div>
+          <p class="kicker" id="card-status"></p>
+          <h1 id="card-title">Объект</h1>
+        </div>
+        <button class="btn btn-primary" type="button" id="save">Сохранить</button>
+      </header>
+      <div class="tabs" id="tabs">
+        <a href="#" data-tab="overview">Обзор</a>
+        <a href="#" data-tab="contracts">Договоры</a>
+        <a href="#" data-tab="payments">Оплаты</a>
+      </div>
+      <section id="panel-overview" class="panel"></section>
+      <section id="panel-contracts" class="panel" hidden></section>
+      <section id="panel-payments" class="panel" hidden></section>
+    </article>
+  </main>
+  <script type="module" src="js/object.js"></script>
+</body>
+</html>

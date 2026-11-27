@@ -2,6 +2,7 @@ import { api, bindLogout, requireOwner } from "./api.js";
 import { money, telHref } from "./format.js";
 import { toast } from "./ui.js";
 import { contractBlock, openContractUpload } from "./contract-upload.js";
+import { objectStatus } from "./object-status.js";
 
 const params = new URLSearchParams(location.search);
 const id = Number(params.get("id"));
@@ -329,8 +330,37 @@ async function load() {
         }));
       });
     }
-    renderList("panel-objects", client.objects, "Объектов пока нет.", function (item) {
-      return line(item.address || "Объект", item.status || "");
+    const objectsBox = document.getElementById("panel-objects");
+    objectsBox.replaceChildren();
+    const createObject = document.createElement("a");
+    createObject.className = "btn";
+    createObject.href = "objects.html?client=" + id;
+    createObject.textContent = "Все объекты";
+    objectsBox.append(createObject);
+    let objects = client.objects || [];
+    const objectsResponse = await api("/api/objects?client=" + id);
+    if (objectsResponse.ok) {
+      const body = await objectsResponse.json();
+      objects = Array.isArray(body) ? body : (body.objects || []);
+    }
+    if (!objects.length) {
+      const emptyObjects = document.createElement("p");
+      emptyObjects.textContent = "Объектов пока нет.";
+      objectsBox.append(emptyObjects);
+    }
+    objects.forEach(function (item) {
+      const link = document.createElement("a");
+      link.className = "object-tile";
+      link.href = "object.html?id=" + item.id;
+      const heading = document.createElement("h3");
+      heading.textContent = item.address || "Объект";
+      const status = document.createElement("p");
+      status.textContent = objectStatus(item.status);
+      link.append(heading, status);
+      objectsBox.append(link);
+      (item.contracts || []).forEach(function (contract) {
+        objectsBox.append(contractBlock(contract));
+      });
     });
     renderFinance();
     renderHistory();

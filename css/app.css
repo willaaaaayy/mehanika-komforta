@@ -996,6 +996,20 @@ dialog::backdrop {
   h1 { font-size: 32px; }
 }
 
+.object-grid, .object-tile { display: grid; gap: 8px; }
+.object-grid { grid-template-columns: 1fr; }
+.object-tile {
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--card);
+  background: var(--surface);
+  color: inherit;
+  text-decoration: none;
+}
+.object-tile img { width: 100%; height: 8rem; object-fit: cover; border-radius: var(--radius); }
+@media (min-width: 600px) {
+  .object-grid { grid-template-columns: 1fr 1fr; }
+}
 .builder { display: grid; gap: 16px; }
 .builder-block, .builder-field { margin: 8px 0; }
 .builder-field { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }

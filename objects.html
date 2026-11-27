@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <title>Объекты — Механика Комфорта</title>
+  <link rel="icon" href="logo.jpg" type="image/jpeg">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <a class="skip" href="#main">К содержанию</a>
+  <header class="bar">
+    <div class="brand">
+      <img src="logo.jpg" alt="" width="96" height="96">
+      <span>Механика Комфорта</span>
+    </div>
+    <nav aria-label="Разделы">
+      <a href="leads.html">Заявки</a>
+      <a href="clients.html">Клиенты</a>
+      <a href="objects.html" aria-current="page">Объекты</a>
+      <a href="finance.html">Финансы</a>
+    </nav>
+    <button class="btn btn-ghost bar-end" type="button" id="logout">Выйти</button>
+  </header>
+  <main class="wrap" id="main">
+    <div class="page-head">
+      <h1 id="title">Объекты</h1>
+      <button class="btn btn-primary" type="button" id="create-open">Создать</button>
+    </div>
+    <p class="banner" id="banner" role="alert" hidden></p>
+    <div class="skeleton" id="skeleton" aria-hidden="true"><span></span><span></span></div>
+    <div class="empty" id="empty" hidden><p>Объектов пока нет.</p></div>
+    <div class="object-grid" id="grid"></div>
+  </main>
+  <dialog id="create">
+    <form class="dialog-body" id="create-form">
+      <h2>Новый объект</h2>
+      <div class="field"><label for="client-id">Клиент, id</label><input id="client-id" inputmode="numeric" required></div>
+      <div class="field"><label for="address">Адрес</label><input id="address" required></div>
+      <div class="field"><label for="kind">Тип</label><input id="kind"></div>
+      <div class="field"><label for="area">Площадь, м²</label><input id="area" inputmode="decimal"></div>
+      <p class="note" id="create-status" role="status" hidden></p>
+      <div class="dialog-actions">
+        <button class="btn btn-primary" type="submit">Создать</button>
+        <button class="btn" type="button" id="create-close">Закрыть</button>
+      </div>
+    </form>
+  </dialog>
+  <script type="module" src="js/objects.js"></script>
+</body>
+</html>

@@ -528,6 +528,23 @@ class LeadScenariosTest {
                 .andExpect(jsonPath("$.contracts[0].schedule[1].amount").value(531250))
                 .andExpect(jsonPath("$.objects[0].address").value(org.hamcrest.Matchers.containsString("этаж 17")))
                 .andExpect(jsonPath("$.due").value(1062500));
+        String objectId = mvc.perform(get("/api/objects").session(session(login)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString().replaceFirst(".*?\"id\":(\\d+).*", "$1");
+        mvc.perform(get("/api/objects/" + objectId).session(session(login)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.contracts[0].number").value("11-10-1-69"))
+                .andExpect(jsonPath("$.contracts[0].schedule[0].kind").value("advance"));
+        mvc.perform(patch("/api/objects/" + objectId)
+                        .session(session(login))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"type\":\"дом\",\"area\":\"86.5\",\"status\":\"work\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.type").value("дом"))
+                .andExpect(jsonPath("$.area").value(86.5))
+                .andExpect(jsonPath("$.status").value("work"))
+                .andExpect(jsonPath("$.contracts[0].object.address").value(org.hamcrest.Matchers.containsString("этаж 17")));
         mvc.perform(get("/api/finance").param("client", clientId).session(session(login)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.clients[0].amount").value(1062500))

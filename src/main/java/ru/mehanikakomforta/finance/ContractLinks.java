@@ -88,7 +88,7 @@ public class ContractLinks implements ApplicationRunner {
     public List<Site> sites(Long clientId) {
         List<Site> sites = new ArrayList<>();
         for (WorkObjectEntity object : objects.findByClientIdOrderById(clientId)) {
-            sites.add(new Site(object.getId(), object.getAddress(), object.getStatus()));
+            sites.add(new Site(object.getId(), object.getAddress(), object.getStatus(), object.getObjectType(), object.getArea()));
         }
         return sites;
     }
@@ -266,6 +266,6 @@ public class ContractLinks implements ApplicationRunner {
     public record Rule(String basis, Integer businessDays) {
     }
 
-    public record Site(Long id, String address, String status) {
+    public record Site(Long id, String address, String status, String objectType, java.math.BigDecimal area) {
     }
 }
