@@ -34,6 +34,7 @@ class ObjectController {
     private final LeadPhotoRepository photos;
     private final InternalRates rates;
     private final ru.mehanikakomforta.leads.LeadRepository leads;
+    private final PayrollService payroll;
 
     ObjectController(
             WorkObjectRepository objects,
@@ -41,7 +42,8 @@ class ObjectController {
             ClientRepository clients,
             LeadPhotoRepository photos,
             InternalRates rates,
-            ru.mehanikakomforta.leads.LeadRepository leads
+            ru.mehanikakomforta.leads.LeadRepository leads,
+            PayrollService payroll
     ) {
         this.objects = objects;
         this.contracts = contracts;
@@ -49,6 +51,7 @@ class ObjectController {
         this.photos = photos;
         this.rates = rates;
         this.leads = leads;
+        this.payroll = payroll;
     }
 
     @GetMapping("/api/objects")
@@ -186,7 +189,8 @@ class ObjectController {
                 photoLead(rows, object.getClientId()),
                 views,
                 costs(object, rows),
-                rates.threshold()
+                rates.threshold(),
+                payroll.labor(object.getAddress())
         );
     }
 
@@ -306,7 +310,8 @@ class ObjectController {
             Long leadId,
             List<ContractView> contracts,
             List<FinanceView.CostLine> costs,
-            BigDecimal threshold
+            BigDecimal threshold,
+            List<PayrollService.LaborLine> labor
     ) {
     }
 

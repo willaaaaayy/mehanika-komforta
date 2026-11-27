@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <title>Зарплаты — Механика Комфорта</title>
+  <link rel="icon" href="logo.jpg" type="image/jpeg">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <a class="skip" href="#main">К содержанию</a>
+  <header class="bar">
+    <div class="brand">
+      <img src="logo.jpg" alt="" width="96" height="96">
+      <span>Механика Комфорта</span>
+    </div>
+    <nav aria-label="Разделы">
+      <a href="finance.html">Финансы</a>
+      <a href="pricelist.html">Прайс</a>
+      <a href="payroll.html" aria-current="page">Зарплаты</a>
+    </nav>
+    <button class="btn btn-ghost bar-end" type="button" id="logout">Выйти</button>
+  </header>
+  <main class="wrap" id="main">
+    <div class="page-head">
+      <h1>Зарплаты</h1>
+      <div class="page-actions">
+        <a class="btn" id="export-xlsx" href="/api/payroll/export?format=xlsx">Excel</a>
+        <a class="btn" id="export-pdf" href="/api/payroll/export?format=pdf">PDF</a>
+      </div>
+    </div>
+    <div class="tools">
+      <div class="field"><label for="from">Дата с</label><input id="from" type="date"></div>
+      <div class="field"><label for="to">Дата по</label><input id="to" type="date"></div>
+    </div>
+    <p class="banner" id="banner" role="alert" hidden></p>
+    <section class="panel">
+      <div class="page-head"><h2>Сотрудники</h2><button class="btn" type="button" id="employee-add">Добавить</button></div>
+      <div id="employees"></div>
+    </section>
+    <section class="panel">
+      <div class="page-head"><h2>Выработка</h2><button class="btn" type="button" id="log-add">Добавить</button></div>
+      <div id="logs"></div>
+    </section>
+    <section class="panel">
+      <h2>Начисление</h2>
+      <div id="payroll"></div>
+    </section>
+  </main>
+  <dialog id="employee">
+    <form class="dialog-body" id="employee-form">
+      <h2>Сотрудник</h2>
+      <div class="field"><label for="employee-name">Имя</label><input id="employee-name" required></div>
+      <div class="field">
+        <label for="employee-type">Тип</label>
+        <select id="employee-type">
+          <option value="piecework">Сдельная</option>
+          <option value="daily">Дневная</option>
+          <option value="office">Офис</option>
+        </select>
+      </div>
+      <div class="field"><label for="employee-rate">Ставка, ₽</label><input id="employee-rate" inputmode="decimal"></div>
+      <p class="note" id="employee-status" role="status" hidden></p>
+      <div class="dialog-actions">
+        <button class="btn btn-primary" type="submit">Сохранить</button>
+        <button class="btn" type="button" id="employee-close">Закрыть</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="log">
+    <form class="dialog-body" id="log-form">
+      <h2>Выработка</h2>
+      <div class="field"><label for="log-employee">Сотрудник</label><select id="log-employee"></select></div>
+      <div class="field"><label for="log-date">Дата</label><input id="log-date" type="date" required></div>
+      <div class="field"><label for="log-object">Объект</label><input id="log-object"></div>
+      <div class="field"><label for="log-work">Позиция</label><input id="log-work" placeholder="screed"></div>
+      <div class="field"><label for="log-quantity">Объём или дни</label><input id="log-quantity" inputmode="decimal"></div>
+      <p class="note" id="log-status" role="status" hidden></p>
+      <div class="dialog-actions">
+        <button class="btn btn-primary" type="submit">Сохранить</button>
+        <button class="btn" type="button" id="log-close">Закрыть</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="pay">
+    <form class="dialog-body" id="pay-form">
+      <h2>Выплата</h2>
+      <div class="field"><label for="pay-amount">Сумма, ₽</label><input id="pay-amount" inputmode="decimal" required></div>
+      <div class="field"><label for="pay-date">Дата</label><input id="pay-date" type="date" required></div>
+      <p class="note" id="pay-status" role="status" hidden></p>
+      <div class="dialog-actions">
+        <button class="btn btn-primary" type="submit">Отметить</button>
+        <button class="btn" type="button" id="pay-close">Закрыть</button>
+      </div>
+    </form>
+  </dialog>
+  <script type="module" src="js/payroll.js"></script>
+</body>
+</html>

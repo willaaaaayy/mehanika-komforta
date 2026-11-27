@@ -135,6 +135,17 @@ function render() {
       + " · отклонение " + (line.deviation == null ? "—" : line.deviation + " %");
     costs.append(row);
   });
+  const labor = object.labor || [];
+  if (labor.length) {
+    const title = document.createElement("h3");
+    title.textContent = "Зарплата в себестоимости";
+    costs.append(title);
+    labor.forEach(function (item) {
+      const row = document.createElement("p");
+      row.textContent = (item.employee || "Сотрудник") + " · " + sumText(item.amount);
+      costs.append(row);
+    });
+  }
 }
 
 async function loadLeadPhotos() {

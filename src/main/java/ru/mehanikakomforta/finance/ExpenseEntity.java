@@ -129,4 +129,9 @@ class ExpenseEntity {
     void file(String fileName) {
         this.fileName = fileName;
     }
+
+    void cost(BigDecimal amount, BigDecimal owed) {
+        this.amount = amount;
+        this.owed = owed;
+    }
 }

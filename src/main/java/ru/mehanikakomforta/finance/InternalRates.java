@@ -173,6 +173,14 @@ public class InternalRates implements ApplicationRunner {
         return THRESHOLD;
     }
 
+    public BigDecimal laborAt(String workId, LocalDate day) {
+        if (workId == null || workId.isBlank() || day == null) {
+            return null;
+        }
+        InternalRateEntity rate = current(day).get(workId);
+        return rate == null ? null : rate.getLabor();
+    }
+
     private RateView viewAt(String workId, String grade, LocalDate asOf) {
         InternalRateEntity rate = current(asOf).get(workId);
         return rate == null ? null : view(rate, grade == null || grade.isBlank() ? "standard" : grade, asOf);
