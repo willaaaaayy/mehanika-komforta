@@ -31,10 +31,10 @@ const limit = 20 * 1024 * 1024;
 
 const METRICS = [
   ["receivable", "Нам должны", "clients"],
-  ["payable", "Мы должны", ""],
-  ["spent", "Потрачено", ""],
+  ["payable", "Мы должны", "expenses"],
+  ["spent", "Потрачено", "expenses"],
   ["received", "Получено", "clients"],
-  ["profit", "Прибыль", ""],
+  ["profit", "Прибыль", "profit"],
   ["invested", "Вложено в объекты", ""]
 ];
 
@@ -291,6 +291,8 @@ function renderProfit() {
     details.append(list);
     box.append(details);
   });
+  const tabBody = document.getElementById("profit-tab-body");
+  if (tabBody) tabBody.replaceChildren(...[...box.childNodes].map(function (node) { return node.cloneNode(true); }));
 }
 
 function scheduleLine(row) {
@@ -411,8 +413,12 @@ function renderClients() {
 
 function showTab() {
   const clientView = tab === "client" || tab === "clients";
-  overview.hidden = clientView;
+  overview.hidden = clientView || tab === "expenses" || tab === "profit";
   customers.hidden = !clientView;
+  const expensesTab = document.getElementById("expenses-tab");
+  const profitTab = document.getElementById("profit-tab");
+  if (expensesTab) expensesTab.hidden = tab !== "expenses";
+  if (profitTab) profitTab.hidden = tab !== "profit";
   document.querySelectorAll("#tabs a").forEach(function (link) {
     const next = new URLSearchParams();
     const name = link.dataset.tab || "";
@@ -717,30 +723,69 @@ const CATEGORIES = {
   works: "Работы",
   labor: "Оплата труда",
   transport: "Транспорт",
-  rent: "Аренда техники"
+  rent: "Аренда техники",
+  office: "Офис",
+  ads: "Реклама",
+  software: "ПО",
+  taxes: "Налоги",
+  salary_office: "Зарплата офиса",
+  other: "Прочее",
+  interest: "Проценты"
 };
+const KIND_CATEGORIES = {
+  object: ["materials", "works", "labor", "transport", "rent"],
+  overhead: ["office", "ads", "software", "taxes", "salary_office", "other"],
+  personal: ["other"],
+  credit: ["interest"]
+};
+let expenseKindFilter = "";
+
+function fillCategories(kind, selected) {
+  const select = document.getElementById("expense-category");
+  select.replaceChildren();
+  (KIND_CATEGORIES[kind] || KIND_CATEGORIES.object).forEach(function (key) {
+    select.append(new Option(CATEGORIES[key], key));
+  });
+  if (selected && [...select.options].some(function (option) { return option.value === selected; })) select.value = selected;
+}
+
+function toggleExpenseKind() {
+  const kind = document.getElementById("expense-kind").value;
+  document.getElementById("expense-object").required = kind === "object";
+  document.getElementById("expense-credit").hidden = kind !== "credit";
+  fillCategories(kind, document.getElementById("expense-category").value);
+}
+
+function expenseLine(item) {
+  const line = document.createElement("p");
+  line.textContent = (item.date || "") + " · " + sumText(item.amount) + " · "
+    + (CATEGORIES[item.category] || item.category || "Расход")
+    + (item.object ? " · " + item.object : "")
+    + (item.supplier ? " · " + item.supplier : "")
+    + (hasNumber(item.owed) ? " · к оплате " + sumText(item.owed) : "");
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "btn btn-text";
+  button.textContent = "Изменить";
+  button.addEventListener("click", function () { openExpense(item); });
+  line.append(button);
+  return line;
+}
 
 function renderExpenses() {
-  const box = document.getElementById("expenses");
-  if (!box) return;
   const rows = report && Array.isArray(report.expenses) ? report.expenses : [];
-  box.replaceChildren();
-  if (!rows.length) {
-    box.textContent = emptyHint;
-    return;
-  }
-  rows.forEach(function (item) {
-    const line = document.createElement("p");
-    line.textContent = (item.date || "") + " · " + sumText(item.amount) + " · "
-      + (CATEGORIES[item.category] || item.category || "Расход")
-      + (item.object ? " · " + item.object : "");
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = "btn btn-text";
-    button.textContent = "Изменить";
-    button.addEventListener("click", function () { openExpense(item); });
-    line.append(button);
-    box.append(line);
+  ["expenses", "expenses-list"].forEach(function (id) {
+    const box = document.getElementById(id);
+    if (!box) return;
+    const list = id === "expenses-list" && expenseKindFilter
+      ? rows.filter(function (item) { return item.kind === expenseKindFilter; })
+      : rows;
+    box.replaceChildren();
+    if (!list.length) {
+      box.textContent = emptyHint;
+      return;
+    }
+    list.forEach(function (item) { box.append(expenseLine(item)); });
   });
 }
 
@@ -756,16 +801,29 @@ async function postPaper(row, kind) {
 
 function openExpense(item) {
   expenseId = item && item.id ? item.id : null;
-  document.getElementById("expense-title").textContent = expenseId ? "Расход" : "Расход";
   document.getElementById("expense-date").value = item && item.date ? item.date : todayKey();
   document.getElementById("expense-amount").value = item && item.amount != null ? String(item.amount) : "";
-  document.getElementById("expense-category").value = item && item.category ? item.category : "materials";
+  document.getElementById("expense-kind").value = item && item.kind ? item.kind : "object";
+  toggleExpenseKind();
+  if (item && item.category) document.getElementById("expense-category").value = item.category;
   document.getElementById("expense-object").value = item && item.object ? item.object : (objectSelect.value || "");
+  document.getElementById("expense-supplier").value = item && item.supplier ? item.supplier : "";
+  document.getElementById("expense-principal").value = item && item.principal != null ? String(item.principal) : "";
+  document.getElementById("expense-interest").value = item && item.interest != null ? String(item.interest) : "";
+  document.getElementById("expense-owed").value = item && item.owed != null ? String(item.owed) : "";
+  document.getElementById("expense-confirmed").checked = Boolean(item && item.confirmed);
   document.getElementById("expense-file").value = "";
   document.getElementById("expense-status").hidden = true;
   document.getElementById("expense").showModal();
 }
 
+document.getElementById("expense-kind").addEventListener("change", toggleExpenseKind);
+document.querySelectorAll("#expense-kinds button").forEach(function (button) {
+  button.addEventListener("click", function () {
+    expenseKindFilter = button.dataset.kind || "";
+    renderExpenses();
+  });
+});
 document.getElementById("expense-open").addEventListener("click", function () { openExpense(null); });
 document.getElementById("expense-close").addEventListener("click", function () { document.getElementById("expense").close(); });
 document.getElementById("expense-form").addEventListener("submit", async function (event) {
@@ -775,8 +833,14 @@ document.getElementById("expense-form").addEventListener("submit", async functio
   const form = new FormData();
   form.append("date", document.getElementById("expense-date").value);
   form.append("amount", String(numberOrNull(document.getElementById("expense-amount").value) ?? ""));
+  form.append("kind", document.getElementById("expense-kind").value);
   form.append("category", document.getElementById("expense-category").value);
   form.append("object", document.getElementById("expense-object").value.trim());
+  form.append("supplier", document.getElementById("expense-supplier").value.trim());
+  form.append("principal", String(numberOrNull(document.getElementById("expense-principal").value) ?? ""));
+  form.append("interest", String(numberOrNull(document.getElementById("expense-interest").value) ?? ""));
+  form.append("owed", String(numberOrNull(document.getElementById("expense-owed").value) ?? ""));
+  form.append("confirmed", document.getElementById("expense-confirmed").checked ? "true" : "false");
   const file = document.getElementById("expense-file").files[0];
   if (file) form.append("file", file, file.name);
   const button = document.getElementById("expense-save");

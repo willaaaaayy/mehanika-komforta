@@ -30,19 +30,22 @@ public class ClientController {
     private final LeadRepository leads;
     private final ru.mehanikakomforta.finance.ContractLinks links;
     private final ClientFields cardFields;
+    private final ru.mehanikakomforta.finance.FinanceService finances;
 
     public ClientController(
             ClientRepository clients,
             ClientEventRepository events,
             LeadRepository leads,
             ru.mehanikakomforta.finance.ContractLinks links,
-            ClientFields cardFields
+            ClientFields cardFields,
+            ru.mehanikakomforta.finance.FinanceService finances
     ) {
         this.clients = clients;
         this.events = events;
         this.leads = leads;
         this.links = links;
         this.cardFields = cardFields;
+        this.finances = finances;
     }
 
     @GetMapping("/api/clients")
@@ -200,6 +203,7 @@ public class ClientController {
             lead = leads.findById(client.getSourceLeadId()).map(LeadResponse::from).orElse(null);
         }
         var money = links.money(client.getId());
+        var share = finances.share(client.getId(), links.contractsOf(client.getId()));
         return new ClientPage(
                 client.getId(),
                 client.getType(),
@@ -220,7 +224,10 @@ public class ClientController {
                         .map(event -> new HistoryLine(event.getAt().toString(), historyText(event.getAction())))
                         .toList(),
                 lead,
-                cardFields.valuesOf(client.getId())
+                cardFields.valuesOf(client.getId()),
+                share.spent(),
+                share.profit(),
+                share.payable()
         );
     }
 
@@ -352,7 +359,10 @@ public class ClientController {
             List<ru.mehanikakomforta.finance.ContractLinks.Site> objects,
             List<HistoryLine> history,
             LeadResponse lead,
-            java.util.Map<String, Object> customFields
+            java.util.Map<String, Object> customFields,
+            java.math.BigDecimal spent,
+            java.math.BigDecimal profit,
+            java.math.BigDecimal payable
     ) {
     }
 

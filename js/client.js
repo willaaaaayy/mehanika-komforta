@@ -259,6 +259,9 @@ function renderFinance() {
   box.append(line("Оплачено", sumText(client.paid)));
   box.append(line("Остаток", sumText(client.due)));
   box.append(line("Просрочено", sumText(client.overdue)));
+  box.append(line("Потрачено", sumText(client.spent)));
+  box.append(line("Прибыль", sumText(client.profit)));
+  box.append(line("Мы должны", sumText(client.payable)));
   const link = document.createElement("a");
   link.href = "finance.html?tab=client&client=" + id;
   link.textContent = "Те же цифры в финансах";

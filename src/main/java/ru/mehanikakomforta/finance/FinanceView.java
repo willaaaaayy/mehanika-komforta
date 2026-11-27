@@ -8,7 +8,10 @@ record FinanceView(
         Totals totals,
         List<ClientRow> clients,
         List<Attention> attention,
-        List<Week> weeks
+        List<Week> weeks,
+        List<ExpenseRow> expenses,
+        List<Month> months,
+        List<ProfitRow> profit
 ) {
     record Totals(
             BigDecimal receivable,
@@ -54,6 +57,30 @@ record FinanceView(
     record Attention(String clientId, String title, BigDecimal amount, Integer days) {
     }
 
-    record Week(String week, BigDecimal in) {
+    record Week(String week, BigDecimal in, BigDecimal out) {
+    }
+
+    record Month(String month, BigDecimal profit) {
+    }
+
+    record ProfitRow(String title, BigDecimal amount, BigDecimal share, List<ProfitLine> lines) {
+    }
+
+    record ProfitLine(String title, BigDecimal amount) {
+    }
+
+    record ExpenseRow(
+            Long id,
+            LocalDate date,
+            BigDecimal amount,
+            String kind,
+            String category,
+            String object,
+            String supplier,
+            BigDecimal principal,
+            BigDecimal interest,
+            BigDecimal owed,
+            Boolean confirmed
+    ) {
     }
 }

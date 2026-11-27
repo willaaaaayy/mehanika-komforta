@@ -77,6 +77,10 @@ public class ContractLinks implements ApplicationRunner {
         return moneyOf(contracts.findByClientIdAndConfirmedTrueOrderByCreatedAtDesc(clientId));
     }
 
+    public List<ContractEntity> contractsOf(Long clientId) {
+        return contracts.findByClientIdAndConfirmedTrueOrderByCreatedAtDesc(clientId);
+    }
+
     public List<Card> cards(Long clientId) {
         List<Card> cards = new ArrayList<>();
         for (ContractEntity contract : contracts.findByClientIdAndConfirmedTrueOrderByCreatedAtDesc(clientId)) {

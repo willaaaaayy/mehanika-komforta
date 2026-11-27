@@ -34,12 +34,14 @@ class ContractController {
     private final ContractRepository contracts;
     private final ScheduleRepository schedule;
     private final ContractLinks links;
+    private final FinanceService finances;
     private final CrmProperties properties;
 
-    ContractController(ContractRepository contracts, ScheduleRepository schedule, ContractLinks links, CrmProperties properties) {
+    ContractController(ContractRepository contracts, ScheduleRepository schedule, ContractLinks links, FinanceService finances, CrmProperties properties) {
         this.contracts = contracts;
         this.schedule = schedule;
         this.links = links;
+        this.finances = finances;
         this.properties = properties;
     }
 
@@ -126,14 +128,22 @@ class ContractController {
                     items
             ));
         }
-        List<FinanceView.Week> weekRows = weeks.entrySet().stream()
-                .map(item -> new FinanceView.Week(item.getKey(), item.getValue()))
-                .toList();
+        FinanceService.Result money = finances.assess(rows, from, to, mode, client, object);
+        Map<String, FinanceView.Week> weekRows = new LinkedHashMap<>();
+        for (var item : weeks.entrySet()) {
+            weekRows.put(item.getKey(), new FinanceView.Week(item.getKey(), item.getValue(), money.outs().get(item.getKey())));
+        }
+        for (var item : money.outs().entrySet()) {
+            weekRows.putIfAbsent(item.getKey(), new FinanceView.Week(item.getKey(), null, item.getValue()));
+        }
         return new FinanceView(
-                new FinanceView.Totals(receivable, null, null, received, null, null),
+                new FinanceView.Totals(receivable, money.payable(), money.spent(), received, money.profit(), null),
                 clients,
                 attention,
-                weekRows
+                new ArrayList<>(weekRows.values()),
+                money.expenses(),
+                money.months(),
+                money.cascade()
         );
     }
 
