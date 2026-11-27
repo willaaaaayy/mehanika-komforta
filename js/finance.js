@@ -35,7 +35,8 @@ const METRICS = [
   ["spent", "Потрачено", "expenses"],
   ["received", "Получено", "clients"],
   ["profit", "Прибыль", "profit"],
-  ["invested", "Вложено в объекты", ""]
+  ["invested", "Деньги в объектах", "capital"],
+  ["profitability", "Рентабельность", "capital"]
 ];
 
 function todayKey() {
@@ -107,6 +108,11 @@ function sumText(value) {
   return money(value);
 }
 
+function percentText(value) {
+  if (value == null || value === "" || !Number.isFinite(Number(value))) return "—";
+  return String(value).replace(".", ",") + " %";
+}
+
 function showBanner(message) {
   banner.hidden = !message;
   banner.textContent = message || "";
@@ -146,9 +152,66 @@ function renderMetrics() {
     name.textContent = item[1];
     const value = document.createElement("strong");
     value.className = "num";
-    value.textContent = sumText(totals[item[0]]);
+    value.textContent = item[0] === "profitability" ? percentText(totals[item[0]]) : sumText(totals[item[0]]);
+    if (item[0] === "profitability") value.title = "Чистая прибыль за период делится на средний вложенный капитал и умножается на 100.";
     card.append(name, value);
     box.append(card);
+  });
+}
+
+function renderCapital() {
+  const totals = report && report.totals ? report.totals : {};
+  const total = document.getElementById("capital-total");
+  const rate = document.getElementById("capital-rate");
+  const monthsBox = document.getElementById("capital-months");
+  const list = document.getElementById("capital-list");
+  if (!total || !list) return;
+  total.textContent = "Деньги в объектах: " + sumText(totals.invested);
+  rate.textContent = "Рентабельность: " + percentText(totals.profitability);
+  rate.title = "Чистая прибыль за период делится на средний вложенный капитал и умножается на 100.";
+  const months = report && Array.isArray(report.profitabilityMonths) ? report.profitabilityMonths : [];
+  const knownMonths = months.filter(function (item) { return item && hasNumber(item.value); });
+  monthsBox.replaceChildren();
+  if (!knownMonths.length) monthsBox.textContent = emptyHint;
+  else {
+    const max = Math.max.apply(null, knownMonths.map(function (item) { return Math.abs(Number(item.value)); })) || 1;
+    knownMonths.forEach(function (item) {
+      const row = document.createElement("div");
+      row.className = "week";
+      const label = document.createElement("span");
+      label.textContent = item.month || "";
+      const bar = document.createElement("span");
+      bar.className = "bar";
+      bar.style.width = Math.round((Math.abs(Number(item.value)) / max) * 100) + "%";
+      const sum = document.createElement("span");
+      sum.className = "num";
+      sum.textContent = percentText(item.value);
+      row.append(label, bar, sum);
+      monthsBox.append(row);
+    });
+  }
+  const rows = report && Array.isArray(report.capital) ? report.capital : [];
+  const known = rows.filter(function (item) { return item && hasNumber(item.invested); });
+  list.replaceChildren();
+  if (!known.length) {
+    const empty = document.createElement("p");
+    empty.textContent = emptyHint;
+    list.append(empty);
+    return;
+  }
+  known.forEach(function (item) {
+    const row = document.createElement("p");
+    const link = document.createElement("a");
+    link.href = item.objectId ? "object.html?id=" + item.objectId : "objects.html";
+    link.textContent = item.address || "Объект";
+    row.append(link);
+    row.append(document.createTextNode(
+      " · вложено " + sumText(item.invested)
+      + " · пик " + sumText(item.peak)
+      + (item.ageDays == null ? "" : " · " + item.ageDays + " дн.")
+      + (item.returnDate ? " · возврат " + item.returnDate : "")
+    ));
+    list.append(row);
   });
 }
 
@@ -413,12 +476,14 @@ function renderClients() {
 
 function showTab() {
   const clientView = tab === "client" || tab === "clients";
-  overview.hidden = clientView || tab === "expenses" || tab === "profit";
+  overview.hidden = clientView || tab === "expenses" || tab === "profit" || tab === "capital";
   customers.hidden = !clientView;
   const expensesTab = document.getElementById("expenses-tab");
   const profitTab = document.getElementById("profit-tab");
+  const capitalTab = document.getElementById("capital-tab");
   if (expensesTab) expensesTab.hidden = tab !== "expenses";
   if (profitTab) profitTab.hidden = tab !== "profit";
+  if (capitalTab) capitalTab.hidden = tab !== "capital";
   document.querySelectorAll("#tabs a").forEach(function (link) {
     const next = new URLSearchParams();
     const name = link.dataset.tab || "";
@@ -456,6 +521,7 @@ async function load() {
       renderWeeks();
       renderMonths();
       renderProfit();
+      renderCapital();
       renderExpenses();
       renderClients();
       showTab();
@@ -475,6 +541,7 @@ async function load() {
     renderWeeks();
     renderMonths();
     renderProfit();
+    renderCapital();
     renderExpenses();
     renderClients();
     showTab();

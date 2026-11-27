@@ -3,21 +3,28 @@ package ru.mehanikakomforta.finance;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 import java.time.temporal.WeekFields;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 public class FinanceService {
 
-    private final ExpenseRepository expenses;
+    private static final Set<String> FINISHED = Set.of("done", "warranty", "сдан", "гарантия");
 
-    public FinanceService(ExpenseRepository expenses) {
+    private final ExpenseRepository expenses;
+    private final WorkObjectRepository objects;
+
+    public FinanceService(ExpenseRepository expenses, WorkObjectRepository objects) {
         this.expenses = expenses;
+        this.objects = objects;
     }
 
     public Result assess(List<ContractEntity> contracts, LocalDate from, LocalDate to, String mode, String client, String object) {
@@ -84,12 +91,13 @@ public class FinanceService {
         Map<String, BigDecimal> monthRevenue = cash ? monthlyRevenue(contracts, from, to) : Map.of();
         List<FinanceView.Month> months = cash ? months(monthRevenue, monthCosts) : List.of();
         List<FinanceView.ProfitRow> cascade = cascade(revenue, direct, directLines, overhead, overheadLines, interest, interestLines, personal, profit);
-        return new Result(spent, profit, payable, outs, months, cascade, listed);
+        Capital capital = capital(contracts, from, to, client, object, profit, months);
+        return new Result(spent, profit, payable, capital.invested(), capital.profitability(), outs, months, cascade, listed, capital.rows(), capital.months());
     }
 
     public Share share(Long clientId, List<ContractEntity> contracts) {
         Result result = assess(contracts, null, null, "cash", String.valueOf(clientId), null);
-        return new Share(result.spent(), result.profit(), result.payable());
+        return new Share(result.spent(), result.profit(), result.payable(), result.invested(), result.profitability());
     }
 
     private static BigDecimal costOf(ExpenseEntity expense) {
@@ -102,7 +110,7 @@ public class FinanceService {
         return expense.getAmount();
     }
 
-    private static boolean matches(ExpenseEntity expense, List<ContractEntity> contracts, String client, String object) {
+    private boolean matches(ExpenseEntity expense, List<ContractEntity> contracts, String client, String object) {
         if (object != null && !object.isBlank() && !object.equals(expense.getObjectName())) {
             return false;
         }
@@ -114,6 +122,11 @@ public class FinanceService {
         }
         for (ContractEntity contract : contracts) {
             if (expense.getObjectName() != null && expense.getObjectName().equals(contract.getObjectAddress())) {
+                return true;
+            }
+        }
+        for (WorkObjectEntity site : objects.findAll()) {
+            if (String.valueOf(site.getClientId()).equals(client) && site.getAddress() != null && site.getAddress().equals(expense.getObjectName())) {
                 return true;
             }
         }
@@ -230,17 +243,207 @@ public class FinanceService {
         return value == null ? BigDecimal.ZERO : value;
     }
 
+    private Capital capital(List<ContractEntity> contracts, LocalDate from, LocalDate to, String client, String objectFilter, BigDecimal profit, List<FinanceView.Month> profitMonths) {
+        List<ExpenseEntity> all = expenses.findAllByOrderBySpentOnDesc();
+        BigDecimal invested = null;
+        BigDecimal average = null;
+        List<FinanceView.CapitalRow> rows = new ArrayList<>();
+        LocalDate today = LocalDate.now();
+        for (WorkObjectEntity site : objects.findAll()) {
+            if (objectFilter != null && !objectFilter.isBlank() && !objectFilter.equals(site.getAddress())) {
+                continue;
+            }
+            if (!inScope(site, contracts, client)) {
+                continue;
+            }
+            List<Movement> movements = movements(site, contracts, all);
+            if (movements.isEmpty()) {
+                continue;
+            }
+            movements.sort(Comparator.comparing(Movement::date));
+            BigDecimal balance = BigDecimal.ZERO;
+            BigDecimal peak = null;
+            LocalDate first = null;
+            LocalDate returned = null;
+            boolean opened = false;
+            for (Movement movement : movements) {
+                if (first == null) {
+                    first = movement.date();
+                }
+                balance = balance.add(movement.delta());
+                if (balance.signum() > 0) {
+                    opened = true;
+                    returned = null;
+                    if (peak == null || balance.compareTo(peak) > 0) {
+                        peak = balance;
+                    }
+                } else if (opened) {
+                    returned = movement.date();
+                }
+            }
+            boolean unfinished = site.getStatus() == null || !FINISHED.contains(site.getStatus());
+            BigDecimal current = unfinished && balance.signum() > 0 ? balance : null;
+            if (current != null) {
+                invested = add(invested, current);
+                rows.add(new FinanceView.CapitalRow(
+                        site.getId(),
+                        site.getAddress(),
+                        current,
+                        peak,
+                        first == null ? null : (int) ChronoUnit.DAYS.between(first, today),
+                        null
+                ));
+            }
+            LocalDate start = from != null ? from : first;
+            LocalDate end = to != null ? to : today;
+            BigDecimal slice = average(movements, start, end);
+            if (slice != null) {
+                average = add(average, slice);
+            }
+        }
+        BigDecimal profitability = null;
+        if (profit != null && average != null && average.signum() > 0) {
+            profitability = profit.multiply(BigDecimal.valueOf(100)).divide(average, 1, RoundingMode.HALF_UP);
+        }
+        List<FinanceView.RateMonth> rateMonths = new ArrayList<>();
+        for (FinanceView.Month month : profitMonths) {
+            if (month.profit() == null) {
+                continue;
+            }
+            LocalDate start = LocalDate.parse(month.month() + "-01");
+            BigDecimal monthAverage = monthAverage(contracts, client, objectFilter, all, start, start.plusMonths(1));
+            if (monthAverage == null || monthAverage.signum() <= 0) {
+                continue;
+            }
+            rateMonths.add(new FinanceView.RateMonth(
+                    month.month(),
+                    month.profit().multiply(BigDecimal.valueOf(100)).divide(monthAverage, 1, RoundingMode.HALF_UP)
+            ));
+        }
+        return new Capital(invested, profitability, rows, rateMonths);
+    }
+
+    private BigDecimal monthAverage(List<ContractEntity> contracts, String client, String objectFilter, List<ExpenseEntity> all, LocalDate start, LocalDate end) {
+        BigDecimal weighted = BigDecimal.ZERO;
+        long days = Math.max(1, ChronoUnit.DAYS.between(start, end));
+        boolean any = false;
+        for (WorkObjectEntity site : objects.findAll()) {
+            if (objectFilter != null && !objectFilter.isBlank() && !objectFilter.equals(site.getAddress())) {
+                continue;
+            }
+            if (!inScope(site, contracts, client)) {
+                continue;
+            }
+            BigDecimal slice = average(movements(site, contracts, all), start, end);
+            if (slice != null) {
+                any = true;
+                weighted = weighted.add(slice);
+            }
+        }
+        return any ? weighted : null;
+    }
+
+    private static List<Movement> movements(WorkObjectEntity site, List<ContractEntity> contracts, List<ExpenseEntity> all) {
+        List<Movement> movements = new ArrayList<>();
+        for (ExpenseEntity expense : all) {
+            if (!"object".equals(expense.getKind()) || expense.getAmount() == null || expense.getSpentOn() == null) {
+                continue;
+            }
+            if (site.getAddress() != null && site.getAddress().equals(expense.getObjectName())) {
+                movements.add(new Movement(expense.getSpentOn(), expense.getAmount()));
+            }
+        }
+        for (ContractEntity contract : contracts) {
+            boolean same = site.getId().equals(contract.getObjectId())
+                    || (site.getAddress() != null && site.getAddress().equals(contract.getObjectAddress()));
+            if (!same) {
+                continue;
+            }
+            for (ScheduleEntity step : contract.getSchedule()) {
+                if (step.getPaidOn() != null) {
+                    BigDecimal paid = step.getPaidAmount() == null ? step.getAmount() : step.getPaidAmount();
+                    movements.add(new Movement(step.getPaidOn(), paid.negate()));
+                }
+            }
+        }
+        return movements;
+    }
+
+    private static BigDecimal average(List<Movement> movements, LocalDate start, LocalDate end) {
+        if (movements.isEmpty() || start == null || end == null || end.isBefore(start)) {
+            return null;
+        }
+        List<Movement> ordered = new ArrayList<>(movements);
+        ordered.sort(Comparator.comparing(Movement::date));
+        BigDecimal level = BigDecimal.ZERO;
+        for (Movement movement : ordered) {
+            if (movement.date().isBefore(start)) {
+                level = level.add(movement.delta());
+            }
+        }
+        BigDecimal area = BigDecimal.ZERO;
+        LocalDate cursor = start;
+        for (Movement movement : ordered) {
+            if (movement.date().isBefore(start) || movement.date().isAfter(end)) {
+                continue;
+            }
+            long span = ChronoUnit.DAYS.between(cursor, movement.date());
+            if (span > 0 && level.signum() > 0) {
+                area = area.add(level.multiply(BigDecimal.valueOf(span)));
+            }
+            level = level.add(movement.delta());
+            cursor = movement.date();
+        }
+        long tail = ChronoUnit.DAYS.between(cursor, end);
+        if (tail > 0 && level.signum() > 0) {
+            area = area.add(level.multiply(BigDecimal.valueOf(tail)));
+        }
+        long total = ChronoUnit.DAYS.between(start, end);
+        if (total <= 0) {
+            return level.signum() > 0 ? level : null;
+        }
+        if (area.signum() == 0) {
+            return null;
+        }
+        return area.divide(BigDecimal.valueOf(total), 2, RoundingMode.HALF_UP);
+    }
+
+    private static boolean inScope(WorkObjectEntity site, List<ContractEntity> contracts, String client) {
+        if (client == null || client.isBlank()) {
+            return true;
+        }
+        if (String.valueOf(site.getClientId()).equals(client)) {
+            return true;
+        }
+        for (ContractEntity contract : contracts) {
+            if (site.getId().equals(contract.getObjectId()) || (site.getAddress() != null && site.getAddress().equals(contract.getObjectAddress()))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public record Result(
             BigDecimal spent,
             BigDecimal profit,
             BigDecimal payable,
+            BigDecimal invested,
+            BigDecimal profitability,
             Map<String, BigDecimal> outs,
             List<FinanceView.Month> months,
             List<FinanceView.ProfitRow> cascade,
-            List<FinanceView.ExpenseRow> expenses
+            List<FinanceView.ExpenseRow> expenses,
+            List<FinanceView.CapitalRow> capital,
+            List<FinanceView.RateMonth> profitabilityMonths
     ) {
     }
 
-    public record Share(BigDecimal spent, BigDecimal profit, BigDecimal payable) {
+    public record Share(BigDecimal spent, BigDecimal profit, BigDecimal payable, BigDecimal invested, BigDecimal profitability) {
+    }
+
+    private record Capital(BigDecimal invested, BigDecimal profitability, List<FinanceView.CapitalRow> rows, List<FinanceView.RateMonth> months) {
+    }
+
+    private record Movement(LocalDate date, BigDecimal delta) {
     }
 }

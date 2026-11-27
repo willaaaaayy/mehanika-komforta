@@ -137,13 +137,15 @@ class ContractController {
             weekRows.putIfAbsent(item.getKey(), new FinanceView.Week(item.getKey(), null, item.getValue()));
         }
         return new FinanceView(
-                new FinanceView.Totals(receivable, money.payable(), money.spent(), received, money.profit(), null),
+                new FinanceView.Totals(receivable, money.payable(), money.spent(), received, money.profit(), money.invested(), money.profitability()),
                 clients,
                 attention,
                 new ArrayList<>(weekRows.values()),
                 money.expenses(),
                 money.months(),
-                money.cascade()
+                money.cascade(),
+                money.capital(),
+                money.profitabilityMonths()
         );
     }
 

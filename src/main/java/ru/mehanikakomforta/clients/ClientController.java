@@ -227,7 +227,9 @@ public class ClientController {
                 cardFields.valuesOf(client.getId()),
                 share.spent(),
                 share.profit(),
-                share.payable()
+                share.payable(),
+                share.invested(),
+                share.profitability()
         );
     }
 
@@ -362,7 +364,9 @@ public class ClientController {
             java.util.Map<String, Object> customFields,
             java.math.BigDecimal spent,
             java.math.BigDecimal profit,
-            java.math.BigDecimal payable
+            java.math.BigDecimal payable,
+            java.math.BigDecimal invested,
+            java.math.BigDecimal profitability
     ) {
     }
 

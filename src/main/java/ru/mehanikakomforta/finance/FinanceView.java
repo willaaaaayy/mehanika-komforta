@@ -11,7 +11,9 @@ record FinanceView(
         List<Week> weeks,
         List<ExpenseRow> expenses,
         List<Month> months,
-        List<ProfitRow> profit
+        List<ProfitRow> profit,
+        List<CapitalRow> capital,
+        List<RateMonth> profitabilityMonths
 ) {
     record Totals(
             BigDecimal receivable,
@@ -19,7 +21,8 @@ record FinanceView(
             BigDecimal spent,
             BigDecimal received,
             BigDecimal profit,
-            BigDecimal invested
+            BigDecimal invested,
+            BigDecimal profitability
     ) {
     }
 
@@ -67,6 +70,12 @@ record FinanceView(
     }
 
     record ProfitLine(String title, BigDecimal amount) {
+    }
+
+    record CapitalRow(Long objectId, String address, BigDecimal invested, BigDecimal peak, Integer ageDays, LocalDate returnDate) {
+    }
+
+    record RateMonth(String month, BigDecimal value) {
     }
 
     record ExpenseRow(

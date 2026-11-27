@@ -70,6 +70,7 @@
       <a href="finance.html?tab=clients" data-tab="clients">Заказчики</a>
       <a href="finance.html?tab=expenses" data-tab="expenses">Расходы</a>
       <a href="finance.html?tab=profit" data-tab="profit">Прибыль</a>
+      <a href="finance.html?tab=capital" data-tab="capital">Капитал</a>
     </div>
     <p class="banner" id="banner" role="alert" hidden></p>
     <div class="skeleton" id="skeleton" aria-hidden="true"><span></span><span></span><span></span></div>
@@ -109,6 +110,13 @@
         <button type="button" class="btn" data-kind="credit">Кредитные</button>
       </div>
       <div id="expenses-list"></div>
+    </section>
+    <section id="capital-tab" class="panel" hidden>
+      <h2>Деньги в объектах</h2>
+      <p id="capital-total" class="num"></p>
+      <p id="capital-rate" class="num" title="Чистая прибыль за период делится на средний вложенный капитал и умножается на 100."></p>
+      <div id="capital-months"></div>
+      <div id="capital-list"></div>
     </section>
     <section id="profit-tab" class="panel" hidden>
       <h2>Прибыль за месяц</h2>

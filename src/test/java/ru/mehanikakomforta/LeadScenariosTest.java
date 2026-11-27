@@ -657,6 +657,69 @@ class LeadScenariosTest {
     }
 
     @Test
+    void moneyInAnOpenObjectSetsInvestedAndProfitability() throws Exception {
+        MockMvc mvc = mvc();
+        MvcResult login = mvc.perform(post("/api/session")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"password\":\"test-admin-secret\"}"))
+                .andExpect(status().isNoContent())
+                .andReturn();
+        MvcResult created = mvc.perform(post("/api/leads")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Капитал","phone":"+7 900 555-01-10","objectType":"Склад","source":"site"}
+                                """))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String leadId = created.getResponse().getContentAsString().replaceFirst(".*?\"id\":(\\d+).*", "$1");
+        MvcResult converted = mvc.perform(post("/api/leads/" + leadId + "/convert")
+                        .session(session(login))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"merge\":false,\"type\":\"company\",\"name\":\"Капитал\"}"))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String clientId = converted.getResponse().getContentAsString().replaceFirst(".*?\"clientId\":(\\d+).*", "$1");
+        mvc.perform(post("/api/objects")
+                        .session(session(login))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"clientId\":" + clientId + ",\"address\":\"Склад капитала\",\"type\":\"склад\",\"status\":\"prep\"}"))
+                .andExpect(status().isCreated());
+        mvc.perform(multipart("/api/expenses")
+                        .param("date", "2026-11-01")
+                        .param("amount", "1000")
+                        .param("kind", "object")
+                        .param("category", "materials")
+                        .param("object", "Склад капитала")
+                        .session(session(login))
+                        .with(csrf()))
+                .andExpect(status().isCreated());
+        mvc.perform(get("/api/finance").param("client", clientId).session(session(login)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totals.invested").value(1000))
+                .andExpect(jsonPath("$.totals.profitability").value(-100.0))
+                .andExpect(jsonPath("$.capital[0].address").value("Склад капитала"))
+                .andExpect(jsonPath("$.capital[0].peak").value(1000))
+                .andExpect(jsonPath("$.profitabilityMonths[0].value").value(-100.0));
+        mvc.perform(get("/api/clients/" + clientId).session(session(login)))
+                .andExpect(jsonPath("$.invested").value(1000))
+                .andExpect(jsonPath("$.profitability").value(-100.0));
+        mvc.perform(multipart("/api/expenses")
+                        .param("date", "2026-11-02")
+                        .param("amount", "300")
+                        .param("kind", "personal")
+                        .param("category", "other")
+                        .session(session(login))
+                        .with(csrf()))
+                .andExpect(status().isCreated());
+        mvc.perform(get("/api/finance").param("client", clientId).session(session(login)))
+                .andExpect(jsonPath("$.totals.invested").value(1000))
+                .andExpect(jsonPath("$.totals.profit").value(-1000));
+    }
+
+    @Test
     void expensesChangeSpentProfitAndPayable() throws Exception {
         MockMvc mvc = mvc();
         MvcResult login = mvc.perform(post("/api/session")

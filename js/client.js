@@ -262,6 +262,8 @@ function renderFinance() {
   box.append(line("Потрачено", sumText(client.spent)));
   box.append(line("Прибыль", sumText(client.profit)));
   box.append(line("Мы должны", sumText(client.payable)));
+  box.append(line("Деньги в объектах", sumText(client.invested)));
+  box.append(line("Рентабельность", client.profitability == null ? "—" : String(client.profitability).replace(".", ",") + " %"));
   const link = document.createElement("a");
   link.href = "finance.html?tab=client&client=" + id;
   link.textContent = "Те же цифры в финансах";
