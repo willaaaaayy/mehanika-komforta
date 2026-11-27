@@ -24,6 +24,8 @@ const fileInput = document.getElementById("file");
 let report = null;
 let draftId = null;
 let payTarget = null;
+let expenseId = null;
+const emptyHint = "Загрузите договор или внесите первый расход.";
 const limit = 20 * 1024 * 1024;
 
 const METRICS = [
@@ -176,29 +178,117 @@ function renderAttention() {
   box.append(list);
 }
 
+function hasNumber(value) {
+  return value != null && value !== "" && Number.isFinite(Number(value));
+}
+
+function renderOwed() {
+  const totals = report && report.totals ? report.totals : {};
+  const box = document.getElementById("owed");
+  box.replaceChildren();
+  [["receivable", "Нам должны"], ["payable", "Мы должны"]].forEach(function (item) {
+    const card = document.createElement("div");
+    card.className = "metric";
+    const name = document.createElement("span");
+    name.textContent = item[1];
+    const value = document.createElement("strong");
+    value.className = "num";
+    value.textContent = sumText(totals[item[0]]);
+    card.append(name, value);
+    box.append(card);
+  });
+}
+
 function renderWeeks() {
   const box = document.getElementById("weeks");
   const weeks = report && Array.isArray(report.weeks) ? report.weeks : [];
   box.replaceChildren();
-  const withMoney = weeks.filter(function (item) { return item && item.in != null; });
-  if (!withMoney.length) {
-    box.textContent = "Загрузите договор или внесите первый расход.";
+  const rows = weeks.filter(function (item) { return item && (hasNumber(item.in) || hasNumber(item.out)); });
+  if (!rows.length) {
+    box.textContent = emptyHint;
     return;
   }
-  const max = Math.max.apply(null, withMoney.map(function (item) { return Number(item.in) || 0; })) || 1;
-  withMoney.forEach(function (item) {
+  const max = Math.max.apply(null, rows.map(function (item) {
+    return Math.max(hasNumber(item.in) ? Number(item.in) : 0, hasNumber(item.out) ? Number(item.out) : 0);
+  })) || 1;
+  rows.forEach(function (item) {
     const row = document.createElement("div");
     row.className = "week";
     const label = document.createElement("span");
     label.textContent = item.week || "";
-    const bar = document.createElement("span");
-    bar.className = "bar";
-    bar.style.width = Math.round(((Number(item.in) || 0) / max) * 100) + "%";
+    const bars = document.createElement("span");
+    bars.className = "pair-bars";
+    ["in", "out"].forEach(function (key) {
+      const bar = document.createElement("i");
+      bar.className = key;
+      if (hasNumber(item[key]) && Number(item[key]) > 0) {
+        bar.style.height = Math.max(4, Math.round((Number(item[key]) / max) * 100)) + "%";
+      }
+      bars.append(bar);
+    });
     const sum = document.createElement("span");
     sum.className = "num";
-    sum.textContent = sumText(item.in);
+    sum.textContent = "Поступления " + sumText(item.in) + " · расходы " + sumText(item.out);
+    row.append(label, bars, sum);
+    box.append(row);
+  });
+}
+
+function renderMonths() {
+  const box = document.getElementById("months");
+  const months = report && Array.isArray(report.months) ? report.months : [];
+  box.replaceChildren();
+  const rows = months.filter(function (item) { return item && hasNumber(item.profit); });
+  if (!rows.length) {
+    box.textContent = emptyHint;
+    return;
+  }
+  const max = Math.max.apply(null, rows.map(function (item) { return Math.abs(Number(item.profit)); })) || 1;
+  rows.forEach(function (item) {
+    const row = document.createElement("div");
+    row.className = "week";
+    const label = document.createElement("span");
+    label.textContent = item.month || "";
+    const bar = document.createElement("span");
+    bar.className = "bar";
+    bar.style.width = Math.round((Math.abs(Number(item.profit)) / max) * 100) + "%";
+    const sum = document.createElement("span");
+    sum.className = "num";
+    sum.textContent = sumText(item.profit);
     row.append(label, bar, sum);
     box.append(row);
+  });
+}
+
+function renderProfit() {
+  const box = document.getElementById("profit");
+  const rows = report && Array.isArray(report.profit) ? report.profit : [];
+  const known = rows.filter(function (item) { return item && hasNumber(item.amount); });
+  box.replaceChildren();
+  if (!known.length) {
+    box.textContent = emptyHint;
+    return;
+  }
+  known.forEach(function (item) {
+    const details = document.createElement("details");
+    const summary = document.createElement("summary");
+    summary.textContent = (item.title || "Строка") + " · " + sumText(item.amount)
+      + (item.share != null ? " · " + item.share + " %" : "");
+    details.append(summary);
+    const list = document.createElement("ul");
+    (item.lines || []).forEach(function (line) {
+      if (!line || !hasNumber(line.amount)) return;
+      const row = document.createElement("li");
+      row.textContent = (line.title || "Документ") + " · " + sumText(line.amount);
+      list.append(row);
+    });
+    if (!list.childElementCount) {
+      const row = document.createElement("li");
+      row.textContent = "Нет расшифровки.";
+      list.append(row);
+    }
+    details.append(list);
+    box.append(details);
   });
 }
 
@@ -216,21 +306,44 @@ function scheduleLine(row) {
   } else if (row.status === "paid") {
     item.append(document.createTextNode(" · оплачено"));
   }
-  if (row.id && row.status !== "paid") {
+  if (row.id) {
+    const paid = row.payment || {};
     const button = document.createElement("button");
     button.type = "button";
     button.className = "btn btn-text";
-    button.textContent = "Отметить оплату";
+    button.textContent = paid.id ? "Изменить оплату" : "Отметить оплату";
     button.addEventListener("click", function () {
       payTarget = row;
-      document.getElementById("pay-amount").value = row.amount == null ? "" : String(row.amount);
-      document.getElementById("pay-date").value = todayKey();
+      document.getElementById("pay-title").textContent = paid.id ? "Оплата" : "Оплата";
+      document.getElementById("pay-amount").value = paid.amount != null ? String(paid.amount) : (row.amount == null ? "" : String(row.amount));
+      document.getElementById("pay-date").value = paid.date || todayKey();
+      document.getElementById("pay-method").value = paid.method || "bank";
       document.getElementById("pay-status").hidden = true;
       document.getElementById("pay").showModal();
     });
     item.append(button);
+    const invoice = document.createElement("button");
+    invoice.type = "button";
+    invoice.className = "btn btn-text";
+    invoice.textContent = row.invoice ? "Счёт " + (row.invoice.number || "") : "Выставить счёт";
+    invoice.addEventListener("click", function () { postPaper(row, "invoices"); });
+    item.append(invoice);
+    const act = document.createElement("button");
+    act.type = "button";
+    act.className = "btn btn-text";
+    act.textContent = row.act ? "Акт " + (row.act.number || "") : "Акт";
+    act.addEventListener("click", function () { postPaper(row, "acts"); });
+    item.append(act);
   }
   return item;
+}
+
+function worksLine(work) {
+  if (!work || (!hasNumber(work.clientPrice) && !hasNumber(work.cost))) return null;
+  const row = document.createElement("p");
+  row.className = "work-line";
+  row.textContent = (work.title || "Работа") + " · клиенту " + sumText(work.clientPrice) + " · себестоимость " + sumText(work.cost);
+  return row;
 }
 
 function renderClients() {
@@ -285,6 +398,10 @@ function renderClients() {
         list.append(scheduleLine(row));
       });
       block.append(list);
+      (contract.works || []).forEach(function (work) {
+        const line = worksLine(work);
+        if (line) block.append(line);
+      });
       article.append(block);
     });
     box.append(article);
@@ -326,9 +443,13 @@ async function load() {
       skeleton.hidden = true;
       showBanner("Сервер ещё не отдаёт финансы.");
       fillChoices();
+      renderOwed();
       renderMetrics();
       renderAttention();
       renderWeeks();
+      renderMonths();
+      renderProfit();
+      renderExpenses();
       renderClients();
       showTab();
       return;
@@ -341,9 +462,13 @@ async function load() {
     report = await response.json();
     skeleton.hidden = true;
     fillChoices();
+    renderOwed();
     renderMetrics();
     renderAttention();
     renderWeeks();
+    renderMonths();
+    renderProfit();
+    renderExpenses();
     renderClients();
     showTab();
   } catch {
@@ -565,8 +690,9 @@ document.getElementById("pay-form").addEventListener("submit", async function (e
     method: document.getElementById("pay-method").value
   };
   try {
-    const response = await api("/api/contracts/" + payTarget.contractId + "/payments", {
-      method: "POST",
+    const paid = payTarget.payment || {};
+    const response = await api("/api/contracts/" + payTarget.contractId + "/payments" + (paid.id ? "/" + paid.id : ""), {
+      method: paid.id ? "PATCH" : "POST",
       body: JSON.stringify(body)
     });
     if (!response.ok) {
@@ -590,6 +716,95 @@ document.getElementById("pay-form").addEventListener("submit", async function (e
   });
 });
 document.getElementById("refresh").addEventListener("click", load);
+
+const CATEGORIES = {
+  materials: "Материалы",
+  works: "Работы",
+  labor: "Оплата труда",
+  transport: "Транспорт",
+  rent: "Аренда техники"
+};
+
+function renderExpenses() {
+  const box = document.getElementById("expenses");
+  if (!box) return;
+  const rows = report && Array.isArray(report.expenses) ? report.expenses : [];
+  box.replaceChildren();
+  if (!rows.length) {
+    box.textContent = emptyHint;
+    return;
+  }
+  rows.forEach(function (item) {
+    const line = document.createElement("p");
+    line.textContent = (item.date || "") + " · " + sumText(item.amount) + " · "
+      + (CATEGORIES[item.category] || item.category || "Расход")
+      + (item.object ? " · " + item.object : "");
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "btn btn-text";
+    button.textContent = "Изменить";
+    button.addEventListener("click", function () { openExpense(item); });
+    line.append(button);
+    box.append(line);
+  });
+}
+
+async function postPaper(row, kind) {
+  if (!row.contractId || !row.id) return;
+  const response = await api("/api/contracts/" + row.contractId + "/" + kind, {
+    method: "POST",
+    body: JSON.stringify({ scheduleId: row.id })
+  });
+  if (response.ok) await load();
+  else showBanner(kind === "acts" ? "Не удалось записать акт." : "Не удалось выставить счёт.");
+}
+
+function openExpense(item) {
+  expenseId = item && item.id ? item.id : null;
+  document.getElementById("expense-title").textContent = expenseId ? "Расход" : "Расход";
+  document.getElementById("expense-date").value = item && item.date ? item.date : todayKey();
+  document.getElementById("expense-amount").value = item && item.amount != null ? String(item.amount) : "";
+  document.getElementById("expense-category").value = item && item.category ? item.category : "materials";
+  document.getElementById("expense-object").value = item && item.object ? item.object : (objectSelect.value || "");
+  document.getElementById("expense-file").value = "";
+  document.getElementById("expense-status").hidden = true;
+  document.getElementById("expense").showModal();
+}
+
+document.getElementById("expense-open").addEventListener("click", function () { openExpense(null); });
+document.getElementById("expense-close").addEventListener("click", function () { document.getElementById("expense").close(); });
+document.getElementById("expense-form").addEventListener("submit", async function (event) {
+  event.preventDefault();
+  const status = document.getElementById("expense-status");
+  status.hidden = true;
+  const form = new FormData();
+  form.append("date", document.getElementById("expense-date").value);
+  form.append("amount", String(numberOrNull(document.getElementById("expense-amount").value) ?? ""));
+  form.append("category", document.getElementById("expense-category").value);
+  form.append("object", document.getElementById("expense-object").value.trim());
+  const file = document.getElementById("expense-file").files[0];
+  if (file) form.append("file", file, file.name);
+  const button = document.getElementById("expense-save");
+  setBusy(button, true, "Сохраняем…");
+  try {
+    const response = await api("/api/expenses" + (expenseId ? "/" + expenseId : ""), {
+      method: expenseId ? "PATCH" : "POST",
+      body: form
+    });
+    if (!response.ok) {
+      status.hidden = false;
+      status.textContent = "Не удалось записать расход.";
+      return;
+    }
+    document.getElementById("expense").close();
+    await load();
+  } catch {
+    status.hidden = false;
+    status.textContent = "Не удалось записать расход.";
+  } finally {
+    setBusy(button, false);
+  }
+});
 
 readFilters();
 showTab();

@@ -7,4 +7,6 @@ import java.util.List;
 public interface LeadRepository extends JpaRepository<LeadEntity, Long> {
 
     List<LeadEntity> findAllByOrderByCreatedAtDesc();
+
+    long countByClientId(Long clientId);
 }

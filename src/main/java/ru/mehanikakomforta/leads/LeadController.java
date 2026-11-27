@@ -82,8 +82,9 @@ public class LeadController {
     }
 
     @GetMapping("/api/leads")
-    public ResponseEntity<List<LeadResponse>> list() {
+    public ResponseEntity<List<LeadResponse>> list(@RequestParam(required = false) Boolean converted) {
         List<LeadResponse> body = leads.findAllByOrderByCreatedAtDesc().stream()
+                .filter(lead -> converted == null || converted.equals(lead.getClientId() != null))
                 .map(this::view)
                 .toList();
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(body);

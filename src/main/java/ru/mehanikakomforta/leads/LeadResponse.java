@@ -27,6 +27,9 @@ public record LeadResponse(
         BigDecimal heightM,
         List<String> complexItems,
         String complexNote,
+        Long clientId,
+        Instant convertedAt,
+        String convertedBy,
         TelegramView telegram
 ) {
     public record TelegramView(
@@ -75,6 +78,9 @@ public record LeadResponse(
                 lead.getHeightM(),
                 SurveyText.list(lead.getComplexItems()),
                 lead.getComplexNote(),
+                lead.getClientId(),
+                lead.getConvertedAt(),
+                lead.getConvertedBy(),
                 telegram
         );
     }

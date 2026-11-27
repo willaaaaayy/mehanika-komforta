@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <title>Клиенты — Механика Комфорта</title>
+  <link rel="icon" href="logo.jpg" type="image/jpeg">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <a class="skip" href="#main">К содержанию</a>
+  <header class="bar">
+    <div class="brand">
+      <img src="logo.jpg" alt="" width="96" height="96">
+      <span>Механика Комфорта</span>
+    </div>
+    <nav aria-label="Разделы">
+      <a href="leads.html">Заявки</a>
+      <a href="clients.html" aria-current="page">Клиенты</a>
+      <a href="finance.html">Финансы</a>
+    </nav>
+    <button class="btn btn-ghost bar-end" type="button" id="logout">Выйти</button>
+  </header>
+  <main class="wrap" id="main">
+    <div class="page-head">
+      <h1 id="title">Клиенты</h1>
+    </div>
+    <div class="tools">
+      <div class="field">
+        <label for="query">Поиск</label>
+        <input id="query" type="search" placeholder="Имя или телефон">
+      </div>
+      <div class="field">
+        <label for="status">Статус</label>
+        <select id="status">
+          <option value="current">Текущие</option>
+          <option value="completed">Завершённые</option>
+          <option value="archived">Архив</option>
+          <option value="">Все</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="type">Тип</label>
+        <select id="type">
+          <option value="">Все</option>
+          <option value="person">Физлицо</option>
+          <option value="sole">ИП</option>
+          <option value="company">Юрлицо</option>
+        </select>
+      </div>
+    </div>
+    <p class="banner" id="banner" role="alert" hidden></p>
+    <div class="skeleton" id="skeleton" aria-hidden="true"><span></span><span></span><span></span></div>
+    <div class="empty" id="empty" hidden>
+      <p>Текущих клиентов пока нет.</p>
+    </div>
+    <div class="table-wrap" id="table-wrap" hidden>
+      <table class="leads">
+        <caption>Список клиентов</caption>
+        <thead>
+          <tr>
+            <th>Клиент</th>
+            <th>Договоры</th>
+            <th>Сумма</th>
+            <th>Оплачено</th>
+            <th>Остаток</th>
+            <th>Просрочено</th>
+            <th>Ближайший платёж</th>
+          </tr>
+        </thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </main>
+  <div class="toasts" id="toasts" aria-live="polite"></div>
+  <script type="module" src="js/clients.js"></script>
+</body>
+</html>

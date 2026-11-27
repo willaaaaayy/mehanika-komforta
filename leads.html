@@ -17,6 +17,7 @@
     </div>
     <nav aria-label="Разделы">
       <a href="leads.html" aria-current="page">Заявки</a>
+      <a href="clients.html">Клиенты</a>
       <a href="finance.html">Финансы</a>
     </nav>
     <button class="btn btn-ghost bar-end" type="button" id="logout">Выйти</button>
@@ -40,6 +41,13 @@
         <label for="stage">Этап</label>
         <select id="stage">
           <option value="">Все</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="converted">Список</label>
+        <select id="converted">
+          <option value="">Активные</option>
+          <option value="1">Перенесённые</option>
         </select>
       </div>
       <div class="field">

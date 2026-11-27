@@ -17,6 +17,7 @@
     </div>
     <nav aria-label="Разделы">
       <a href="leads.html">Заявки</a>
+      <a href="clients.html">Клиенты</a>
       <a href="finance.html">Финансы</a>
     </nav>
     <button class="btn btn-ghost bar-end" type="button" id="logout">Выйти</button>
@@ -35,6 +36,7 @@
         </div>
         <div class="page-actions">
           <a class="btn" id="call" href="tel:">Позвонить</a>
+          <button class="btn" type="button" id="convert-open">Перевести в клиенты</button>
           <button class="btn btn-primary" type="button" id="save">Сохранить</button>
         </div>
       </header>
@@ -121,9 +123,9 @@
               </div>
             </div>
           </form>
-          <section class="panel" id="dialog-facts" hidden>
+          <section class="panel" id="dialog-box" hidden>
             <h2>Из диалога</h2>
-            <dl id="dialog-facts-list"></dl>
+            <dl id="dialog-fields" class="dialog-fields"></dl>
           </section>
           <section class="estimate" id="estimate-box" aria-live="polite">
             <h2>Вилка</h2>

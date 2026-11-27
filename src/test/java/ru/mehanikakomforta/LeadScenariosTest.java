@@ -557,6 +557,73 @@ class LeadScenariosTest {
                 .andExpect(jsonPath("$.schedule[0].kind").value("advance"));
     }
 
+    @Test
+    void directorConvertsALeadAndCanReturnIt() throws Exception {
+        MockMvc mvc = mvc();
+        MvcResult created = mvc.perform(post("/api/leads")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Клиент","phone":"+7 900 111-22-33","objectType":"Офис","source":"site"}
+                                """))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String id = created.getResponse().getContentAsString().replaceFirst(".*?\"id\":(\\d+).*", "$1");
+        mvc.perform(post("/api/leads/" + id + "/convert").content("{}"))
+                .andExpect(status().isUnauthorized());
+        MvcResult login = mvc.perform(post("/api/session")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"password\":\"test-admin-secret\"}"))
+                .andExpect(status().isNoContent())
+                .andReturn();
+        mvc.perform(post("/api/leads/" + id + "/convert")
+                        .session(session(login))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"merge":false,"type":"company","name":"Клиент","phone":"+7 900 111-22-33","inn":"7700000001"}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.clientId").isNumber());
+        mvc.perform(get("/api/leads").session(session(login)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.name=='Клиент')].clientId").isNotEmpty());
+        mvc.perform(get("/api/leads").param("converted", "true").session(session(login)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.name=='Клиент')].clientId").isNotEmpty());
+        mvc.perform(post("/api/leads/" + id + "/convert")
+                        .session(session(login))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"merge\":false}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("converted"));
+        MvcResult second = mvc.perform(post("/api/leads")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Другой","phone":"79009998877","objectType":"Дом","source":"site"}
+                                """))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String secondId = second.getResponse().getContentAsString().replaceFirst(".*?\"id\":(\\d+).*", "$1");
+        mvc.perform(post("/api/leads/" + secondId + "/convert")
+                        .session(session(login))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"merge\":false,\"inn\":\"7700000001\",\"name\":\"Другой\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("duplicate"))
+                .andExpect(jsonPath("$.clientId").isNumber());
+        mvc.perform(get("/api/clients/duplicates").param("phone", "8 (900) 111-22-33").session(session(login)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name").value("Клиент"));
+        mvc.perform(post("/api/leads/" + id + "/unconvert").session(session(login)).with(csrf()))
+                .andExpect(status().isNoContent());
+        mvc.perform(get("/api/leads").session(session(login)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.name=='Клиент')].stage").value("new"));
+    }
+
     private static MockHttpSession session(MvcResult result) {
         return (MockHttpSession) result.getRequest().getSession(false);
     }

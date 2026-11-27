@@ -1,6 +1,7 @@
 import { api, bindLogout, errorCode, requireOwner } from "./api.js";
 import { ago, dayKey, digits, fileKind, fileSize, shortWhen, SOURCES, stageMeta, STAGES, telHref } from "./format.js";
 import { clearErrors, fieldError, setBusy, toast } from "./ui.js";
+import { openConvert } from "./convert.js";
 
 const banner = document.getElementById("banner");
 const skeleton = document.getElementById("skeleton");
@@ -12,6 +13,7 @@ const title = document.getElementById("title");
 const query = document.getElementById("query");
 const stage = document.getElementById("stage");
 const source = document.getElementById("source");
+const converted = document.getElementById("converted");
 const from = document.getElementById("from");
 const to = document.getElementById("to");
 const chips = document.getElementById("chips");
@@ -34,6 +36,7 @@ function readFilters() {
   const params = new URLSearchParams(location.search);
   query.value = params.get("q") || "";
   stage.value = params.get("stage") || "";
+  converted.value = params.get("converted") || "";
   source.value = params.get("source") || "";
   from.value = params.get("from") || "";
   to.value = params.get("to") || "";
@@ -43,6 +46,7 @@ function writeFilters() {
   const params = new URLSearchParams();
   if (query.value.trim()) params.set("q", query.value.trim());
   if (stage.value) params.set("stage", stage.value);
+  if (converted.value) params.set("converted", converted.value);
   if (source.value) params.set("source", source.value);
   if (from.value) params.set("from", from.value);
   if (to.value) params.set("to", to.value);
@@ -65,6 +69,7 @@ function visible() {
     const day = dayKey(lead.createdAt);
     if (text && haystack.indexOf(text) === -1) return false;
     if (stage.value && lead.stage !== stage.value) return false;
+    if (converted.value === "1" ? !lead.clientId : lead.clientId) return false;
     if (source.value && lead.source !== source.value) return false;
     if (from.value && day < from.value) return false;
     if (to.value && day > to.value) return false;
@@ -140,6 +145,20 @@ function draw() {
     open.textContent = "Открыть";
     open.addEventListener("click", function () { openLead(lead.id); });
     actions.append(open);
+    if (lead.clientId) {
+      const clientLink = document.createElement("a");
+      clientLink.className = "btn btn-text";
+      clientLink.href = "client.html?id=" + lead.clientId;
+      clientLink.textContent = "Клиент";
+      actions.append(clientLink);
+    } else {
+      const convert = document.createElement("button");
+      convert.type = "button";
+      convert.className = "btn btn-text";
+      convert.textContent = "Перевести в клиенты";
+      convert.addEventListener("click", function () { openConvert(lead); });
+      actions.append(convert);
+    }
     tr.append(actions);
     tr.addEventListener("click", function (event) {
       if (event.target.closest("a, button")) return;
@@ -155,6 +174,7 @@ function drawChips() {
   const items = [];
   if (query.value.trim()) items.push(["q", "Поиск: " + query.value.trim()]);
   if (stage.value) items.push(["stage", stageMeta(stage.value)[1]]);
+  if (converted.value === "1") items.push(["converted", "Перенесённые"]);
   if (source.value) items.push(["source", SOURCES[source.value] || source.value]);
   if (from.value) items.push(["from", "С " + from.value]);
   if (to.value) items.push(["to", "По " + to.value]);
@@ -169,6 +189,7 @@ function drawChips() {
     button.addEventListener("click", function () {
       if (item[0] === "q") query.value = "";
       if (item[0] === "stage") stage.value = "";
+      if (item[0] === "converted") converted.value = "";
       if (item[0] === "source") source.value = "";
       if (item[0] === "from") from.value = "";
       if (item[0] === "to") to.value = "";
@@ -191,6 +212,7 @@ function drawChips() {
 function resetFilters() {
   query.value = "";
   stage.value = "";
+  converted.value = "";
   source.value = "";
   from.value = "";
   to.value = "";
@@ -299,7 +321,7 @@ document.getElementById("refresh").addEventListener("click", function () {
   loadPrices();
 });
 
-["query", "stage", "source", "from", "to"].forEach(function (id) {
+["query", "stage", "converted", "source", "from", "to"].forEach(function (id) {
   document.getElementById(id).addEventListener("input", function () {
     writeFilters();
     draw();

@@ -1079,6 +1079,47 @@ dialog::backdrop {
   background: var(--accent);
 }
 
+.finance-board {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.owed {
+  display: grid;
+  gap: 8px;
+}
+
+.pair-bars {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  height: 48px;
+}
+
+.pair-bars i {
+  display: block;
+  width: 10px;
+  height: 0;
+  border-radius: 4px 4px 0 0;
+  background: var(--border);
+}
+
+.pair-bars .in { background: var(--success); }
+.pair-bars .out { background: var(--danger); }
+
+.work-line { margin: 4px 0; }
+
+#profit details { margin: 8px 0; }
+#profit summary { cursor: pointer; }
+
+@media (min-width: 1024px) {
+  .finance-board {
+    grid-template-columns: 16rem minmax(0, 1fr) minmax(0, 1fr);
+    align-items: stretch;
+  }
+}
+
 .schedule-edit {
   display: grid;
   gap: 8px;

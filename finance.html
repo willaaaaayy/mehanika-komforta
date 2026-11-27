@@ -17,6 +17,7 @@
     </div>
     <nav aria-label="Разделы">
       <a href="leads.html">Заявки</a>
+      <a href="clients.html">Клиенты</a>
       <a href="finance.html" aria-current="page">Финансы</a>
     </nav>
     <button class="btn btn-ghost bar-end" type="button" id="logout">Выйти</button>
@@ -26,6 +27,7 @@
       <h1 id="title">Финансы</h1>
       <div class="page-actions">
         <button class="btn btn-primary" type="button" id="upload-open">Загрузить договор</button>
+        <button class="btn" type="button" id="expense-open">Расход</button>
         <button class="btn" type="button" id="refresh">Обновить</button>
       </div>
     </div>
@@ -70,14 +72,30 @@
     <p class="banner" id="banner" role="alert" hidden></p>
     <div class="skeleton" id="skeleton" aria-hidden="true"><span></span><span></span><span></span></div>
     <section id="overview" hidden>
+      <div class="finance-board">
+        <div class="owed" id="owed"></div>
+        <section class="panel">
+          <h2>Денежный поток по неделям</h2>
+          <p class="muted">Поступления и расходы</p>
+          <div id="weeks"></div>
+        </section>
+        <section class="panel">
+          <h2>Прибыль по месяцам</h2>
+          <div id="months"></div>
+        </section>
+      </div>
       <div class="metrics" id="metrics"></div>
+      <section class="panel">
+        <h2>Прибыль за месяц</h2>
+        <div id="profit"></div>
+      </section>
+      <section class="panel">
+        <h2>Расходы по объектам</h2>
+        <div id="expenses"></div>
+      </section>
       <section class="panel">
         <h2>Требует внимания</h2>
         <div id="attention"></div>
-      </section>
-      <section class="panel">
-        <h2>Поступления по неделям</h2>
-        <div id="weeks"></div>
       </section>
     </section>
     <section id="customers" hidden>
@@ -133,6 +151,43 @@
       <div class="dialog-actions">
         <button class="btn btn-primary" type="submit" id="create" disabled>Создать</button>
         <button class="btn" type="button" id="upload-close">Закрыть</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="expense" aria-labelledby="expense-title">
+    <form class="dialog-body" id="expense-form">
+      <h2 id="expense-title">Расход</h2>
+      <div class="field">
+        <label for="expense-date">Дата</label>
+        <input id="expense-date" type="date" required>
+      </div>
+      <div class="field">
+        <label for="expense-amount">Сумма, ₽</label>
+        <input id="expense-amount" inputmode="decimal" required>
+      </div>
+      <div class="field">
+        <label for="expense-category">Категория</label>
+        <select id="expense-category">
+          <option value="materials">Материалы</option>
+          <option value="works">Работы</option>
+          <option value="labor">Оплата труда</option>
+          <option value="transport">Транспорт</option>
+          <option value="rent">Аренда техники</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="expense-object">Объект</label>
+        <input id="expense-object" required>
+      </div>
+      <div class="field">
+        <label for="expense-file">Чек</label>
+        <input id="expense-file" type="file" accept="image/*,.pdf,application/pdf">
+      </div>
+      <p class="note" id="expense-status" role="status" hidden></p>
+      <div class="dialog-actions">
+        <button class="btn btn-primary" type="submit" id="expense-save">Сохранить</button>
+        <button class="btn" type="button" id="expense-close">Закрыть</button>
       </div>
     </form>
   </dialog>

@@ -1,6 +1,7 @@
 import { api, bindLogout, errorCode, requireOwner } from "./api.js";
 import { CONDITIONS, digits, GRADES, money, PACKAGES, shortWhen, SOURCES, stageMeta, STAGES, telHref, yearsLabel } from "./format.js";
 import { clearErrors, fieldError, setBusy, toast } from "./ui.js";
+import { offerConvert, openConvert } from "./convert.js";
 
 const params = new URLSearchParams(location.search);
 const id = Number(params.get("id"));
@@ -78,6 +79,106 @@ function draftKey() {
   return "mk-lead-draft-" + id;
 }
 
+const SECTION_LABELS = {
+  finish: "Отделка",
+  eng: "Инженерия",
+  both: "Отделка и инженерия",
+  complex: "Сложная система"
+};
+
+const DIALOG_FIELDS = [
+  ["city", "Город"],
+  ["works", "Работы"],
+  ["electro", "Электрические точки"],
+  ["water", "Сантехнические точки"],
+  ["cameras", "Камеры"],
+  ["lan", "Интернет или СКС"],
+  ["chase", "Штробление"],
+  ["heightM", "Высота потолка, м"],
+  ["complexItems", "Сложные системы"],
+  ["complexNote", "Комментарий"]
+];
+
+const WORK_LABELS = {
+  screed: "Стяжка пола",
+  plaster: "Штукатурка стен по маякам",
+  putty: "Шпаклёвка стен под покраску",
+  paint_walls: "Покраска стен",
+  paint_ceiling: "Покраска потолка",
+  drywall: "Перегородки и обшивка ГКЛ",
+  tile_floor: "Плитка на пол",
+  tile_walls: "Плитка на стены",
+  laminate: "Ламинат",
+  wallpaper: "Обои",
+  stretch: "Натяжной потолок",
+  panel: "Сборка щита",
+  power: "Промышленная электрика",
+  air: "Сжатый воздух",
+  acs: "СКУД",
+  audio: "Аудиосистема",
+  cctv: "Видеонаблюдение нестандарт"
+};
+
+const SHOWN_ON_CARD = new Set([
+  "id", "name", "phone", "objectType", "source", "createdAt", "stage",
+  "floorArea", "grade", "condition", "packageCode", "estimate", "telegram"
+]);
+
+function sectionLabel(value) {
+  if (value == null) return "";
+  const text = String(value).trim();
+  if (!text) return "";
+  return SECTION_LABELS[text] || text;
+}
+
+function dialogText(key, value) {
+  if (key === "section") return sectionLabel(value);
+  if (value == null) return "не спрашивали";
+  if (key === "chase") return value ? "Да" : "Нет";
+  if (key === "heightM") return String(value).replace(".", ",");
+  if (key === "works" || key === "complexItems") {
+    if (!Array.isArray(value) || value.length === 0) return "не выбрано";
+    return value.map(function (item) { return WORK_LABELS[item] || String(item); }).join(", ");
+  }
+  if (Array.isArray(value)) return value.length ? value.map(String).join(", ") : "не выбрано";
+  if (typeof value === "object") return JSON.stringify(value);
+  return String(value);
+}
+
+function renderDialog(data) {
+  const box = document.getElementById("dialog-box");
+  const list = document.getElementById("dialog-fields");
+  list.replaceChildren();
+  const rows = [];
+  DIALOG_FIELDS.forEach(function (pair) {
+    if (Object.prototype.hasOwnProperty.call(data, pair[0])) rows.push(pair);
+  });
+  if (sectionLabel(data.section)) rows.unshift(["section", "Раздел"]);
+  if (data.telegram && Object.prototype.hasOwnProperty.call(data.telegram, "id")) {
+    rows.push(["telegramId", "Идентификатор Telegram"]);
+  }
+  Object.keys(data).forEach(function (key) {
+    if (key === "section" || SHOWN_ON_CARD.has(key) || DIALOG_FIELDS.some(function (pair) { return pair[0] === key; })) return;
+    rows.push([key, key]);
+  });
+  if (data.telegram) {
+    Object.keys(data.telegram).forEach(function (key) {
+      if (key === "id" || key === "firstName" || key === "lastName" || key === "username" || key === "bio" || key === "photo") return;
+      rows.push(["telegram." + key, "Telegram: " + key]);
+    });
+  }
+  rows.forEach(function (pair) {
+    const term = document.createElement("dt");
+    term.textContent = pair[1];
+    const value = document.createElement("dd");
+    if (pair[0] === "telegramId") value.textContent = dialogText("id", data.telegram.id);
+    else if (pair[0].indexOf("telegram.") === 0) value.textContent = dialogText(pair[0], data.telegram[pair[0].slice(9)]);
+    else value.textContent = dialogText(pair[0], data[pair[0]]);
+    list.append(term, value);
+  });
+  box.hidden = rows.length === 0;
+}
+
 function apply(data) {
   lead = data;
   document.title = (data.name || "Заявка") + " — Механика Комфорта";
@@ -127,70 +228,13 @@ function apply(data) {
   saved = snapshot();
   dirty = false;
   card.hidden = false;
-  showDialog(data);
+  renderDialog(data);
+  const convert = document.getElementById("convert-open");
+  if (convert) {
+    convert.hidden = false;
+    convert.textContent = data.clientId ? "Открыть клиента" : "Перевести в клиенты";
+  }
   offerDraft();
-}
-
-const WORK_TITLES = {
-  screed: "Стяжка пола",
-  plaster: "Штукатурка стен по маякам",
-  putty: "Шпаклёвка стен под покраску",
-  paint_walls: "Покраска стен",
-  paint_ceiling: "Покраска потолка",
-  drywall: "Перегородки и обшивка ГКЛ",
-  tile_floor: "Плитка на пол",
-  tile_walls: "Плитка на стены",
-  laminate: "Ламинат",
-  wallpaper: "Обои",
-  stretch: "Натяжной потолок"
-};
-
-const COMPLEX_TITLES = {
-  panel: "Сборка щита",
-  power: "Промышленная электрика",
-  air: "Сжатый воздух",
-  acs: "СКУД",
-  audio: "Аудиосистема",
-  cctv: "Видеонаблюдение нестандарт"
-};
-
-function fact(list, label, value) {
-  if (value == null || value === "") return;
-  const term = document.createElement("dt");
-  term.textContent = label;
-  const detail = document.createElement("dd");
-  detail.textContent = value;
-  list.append(term, detail);
-}
-
-function titled(ids, titles) {
-  if (ids == null) return null;
-  if (!ids.length) return "не выбраны";
-  return ids.map(function (id) { return titles[id] || id; }).join(", ");
-}
-
-function showDialog(data) {
-  const box = document.getElementById("dialog-facts");
-  const list = document.getElementById("dialog-facts-list");
-  list.replaceChildren();
-  const sections = {
-    finish: "Отделка",
-    eng: "Инженерия",
-    both: "Отделка и инженерия",
-    complex: "Сложная система"
-  };
-  fact(list, "Раздел", data.section == null || data.section === "" ? null : (sections[data.section] || data.section));
-  fact(list, "Город", data.city);
-  fact(list, "Работы", titled(data.works, WORK_TITLES));
-  fact(list, "Электроточки", data.electro);
-  fact(list, "Сантехнические точки", data.water);
-  fact(list, "Камеры", data.cameras);
-  fact(list, "Интернет и СКС", data.lan);
-  fact(list, "Штробление", data.chase == null ? null : (data.chase ? "Да" : "Нет"));
-  fact(list, "Высота потолка, м", data.heightM);
-  fact(list, "Сложная система", titled(data.complexItems, COMPLEX_TITLES));
-  fact(list, "Комментарий", data.complexNote);
-  box.hidden = list.childElementCount === 0;
 }
 
 function offerDraft() {
@@ -398,6 +442,14 @@ async function goList() {
 document.getElementById("editor").addEventListener("input", markDirty);
 document.getElementById("editor").addEventListener("change", markDirty);
 document.getElementById("save").addEventListener("click", save);
+document.getElementById("convert-open").addEventListener("click", function () {
+  if (!lead) return;
+  if (lead.clientId) location.href = "client.html?id=" + lead.clientId;
+  else openConvert(lead);
+});
+stage.addEventListener("change", function () {
+  if (stage.value === "contract" && lead && !lead.clientId && lead.stage !== "contract") offerConvert(lead);
+});
 document.getElementById("back").addEventListener("click", goList);
 document.querySelector(".bar a").addEventListener("click", function (event) {
   if (!dirty) return;
@@ -433,7 +485,8 @@ async function load() {
     }
     let detail = null;
     if (response.ok) detail = await response.json();
-    let data = detail && detail.name ? detail : null;
+    const record = detail && detail.lead && typeof detail.lead === "object" ? detail.lead : detail;
+    let data = record && record.name ? record : null;
     if (!data) {
       const list = await api("/api/leads");
       if (list.ok) {

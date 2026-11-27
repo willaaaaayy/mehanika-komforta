@@ -74,6 +74,15 @@ public class LeadEntity {
     @Column(length = 16)
     private String section;
 
+    @Column(name = "client_id")
+    private Long clientId;
+
+    @Column(name = "converted_at")
+    private Instant convertedAt;
+
+    @Column(name = "converted_by", length = 80)
+    private String convertedBy;
+
     @Column(length = 80)
     private String city;
 
@@ -191,6 +200,30 @@ public class LeadEntity {
 
     public String getSection() {
         return section;
+    }
+
+    public Long getClientId() {
+        return clientId;
+    }
+
+    public Instant getConvertedAt() {
+        return convertedAt;
+    }
+
+    public String getConvertedBy() {
+        return convertedBy;
+    }
+
+    public void converted(Long clientId, Instant at, String actor) {
+        this.clientId = clientId;
+        this.convertedAt = at;
+        this.convertedBy = actor;
+    }
+
+    public void clearConversion() {
+        this.clientId = null;
+        this.convertedAt = null;
+        this.convertedBy = null;
     }
 
     public String getCity() {
