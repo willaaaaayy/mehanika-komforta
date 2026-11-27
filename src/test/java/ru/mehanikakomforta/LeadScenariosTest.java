@@ -640,6 +640,75 @@ class LeadScenariosTest {
     }
 
     @Test
+    void contactPersonSurvivesWhenTheFieldIsRemoved() throws Exception {
+        MockMvc mvc = mvc();
+        MvcResult login = mvc.perform(post("/api/session")
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"password\":\"test-admin-secret\"}"))
+                .andExpect(status().isNoContent())
+                .andReturn();
+        MvcResult created = mvc.perform(post("/api/leads")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Поле","phone":"+7 900 555-01-08","objectType":"Офис","source":"site"}
+                                """))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String leadId = created.getResponse().getContentAsString().replaceFirst(".*?\"id\":(\\d+).*", "$1");
+        MvcResult converted = mvc.perform(post("/api/leads/" + leadId + "/convert")
+                        .session(session(login))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"merge\":false,\"type\":\"company\",\"name\":\"Поле\"}"))
+                .andExpect(status().isCreated())
+                .andReturn();
+        String clientId = converted.getResponse().getContentAsString().replaceFirst(".*?\"clientId\":(\\d+).*", "$1");
+        MvcResult field = mvc.perform(post("/api/client-fields")
+                        .session(session(login))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"type":"company","title":"Контактное лицо","key":"contactPerson","fieldType":"text","group":"contacts"}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.title").value("Контактное лицо"))
+                .andReturn();
+        String fieldId = field.getResponse().getContentAsString().replaceFirst(".*?\"id\":(\\d+).*", "$1");
+        mvc.perform(patch("/api/clients/" + clientId)
+                        .session(session(login))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"customFields\":{\"contactPerson\":\"Анна\"}}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.customFields.contactPerson").value("Анна"));
+        mvc.perform(delete("/api/client-fields/" + fieldId).session(session(login)).with(csrf()))
+                .andExpect(status().isNoContent());
+        mvc.perform(get("/api/clients/" + clientId).session(session(login)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.customFields.contactPerson").value("Анна"));
+        mvc.perform(get("/api/client-layout").param("type", "company").session(session(login)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.fields[?(@.key=='contactPerson')].deleted", org.hamcrest.Matchers.hasItem(true)));
+        mvc.perform(put("/api/client-fields/" + fieldId)
+                        .session(session(login))
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"type\":\"company\",\"title\":\"Контактное лицо\",\"deleted\":false,\"hidden\":false}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.deleted").value(false));
+        mvc.perform(get("/api/clients/" + clientId).session(session(login)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.customFields.contactPerson").value("Анна"));
+        String layout = mvc.perform(get("/api/client-layout").param("type", "company").session(session(login)))
+                .andReturn().getResponse().getContentAsString();
+        String nameId = layout.replaceFirst(".*?\"id\":(\\d+),\"key\":\"name\".*", "$1");
+        mvc.perform(delete("/api/client-fields/" + nameId).session(session(login)).with(csrf()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.error").value("system"));
+    }
+
+    @Test
     void kainovContractKeepsTheActRule() throws Exception {
         String sample = System.getProperty("contract.sample", "");
         org.junit.jupiter.api.Assumptions.assumeTrue(sample != null && !sample.isBlank() && java.nio.file.Files.isRegularFile(java.nio.file.Path.of(sample)));

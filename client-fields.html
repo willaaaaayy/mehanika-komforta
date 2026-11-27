@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <title>Карточка клиента — Механика Комфорта</title>
+  <link rel="icon" href="logo.jpg" type="image/jpeg">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <a class="skip" href="#main">К содержанию</a>
+  <header class="bar">
+    <div class="brand">
+      <img src="logo.jpg" alt="" width="96" height="96">
+      <span>Механика Комфорта</span>
+    </div>
+    <nav aria-label="Разделы">
+      <a href="leads.html">Заявки</a>
+      <a href="clients.html">Клиенты</a>
+      <a href="client-fields.html" aria-current="page">Поля</a>
+      <a href="finance.html">Финансы</a>
+    </nav>
+    <button class="btn btn-ghost bar-end" type="button" id="logout">Выйти</button>
+  </header>
+  <main class="wrap" id="main">
+    <div class="page-head">
+      <h1>Карточка клиента</h1>
+      <div class="page-actions">
+        <button class="btn" type="button" id="preview-desktop" aria-pressed="true">Компьютер</button>
+        <button class="btn" type="button" id="preview-phone" aria-pressed="false">Телефон</button>
+        <button class="btn btn-primary" type="button" id="save-order">Сохранить порядок</button>
+      </div>
+    </div>
+    <div class="field">
+      <label for="layout-type">Макет</label>
+      <select id="layout-type">
+        <option value="person">Физлицо</option>
+        <option value="sole">ИП</option>
+        <option value="company">Юрлицо</option>
+      </select>
+    </div>
+    <p class="banner" id="banner" role="alert" hidden></p>
+    <div class="builder">
+      <section class="panel" id="blocks"></section>
+      <section class="panel preview" id="preview">
+        <h2>Предпросмотр</h2>
+        <div id="preview-body"></div>
+      </section>
+    </div>
+    <section class="panel">
+      <h2>Новое поле</h2>
+      <form id="new-field" class="form-grid">
+        <div class="field"><label for="new-title">Название</label><input id="new-title" required></div>
+        <div class="field"><label for="new-key">Ключ</label><input id="new-key" required placeholder="contactPerson"></div>
+        <div class="field">
+          <label for="new-type">Тип</label>
+          <select id="new-type">
+            <option value="text">Текст</option>
+            <option value="number">Число</option>
+            <option value="money">Деньги</option>
+            <option value="date">Дата</option>
+            <option value="select">Список</option>
+            <option value="multiselect">Мультивыбор</option>
+            <option value="checkbox">Флажок</option>
+            <option value="phone">Телефон</option>
+            <option value="email">Почта</option>
+            <option value="file">Файл</option>
+            <option value="link">Ссылка</option>
+          </select>
+        </div>
+        <div class="field"><label for="new-group">Блок</label><input id="new-group" value="contacts"></div>
+        <div class="field span-2"><label for="new-hint">Подсказка</label><input id="new-hint"></div>
+        <div class="field"><label for="new-default">Значение по умолчанию</label><input id="new-default"></div>
+        <div class="field"><label for="new-contract">Поле договора</label><input id="new-contract" placeholder="client.inn"></div>
+        <div class="field"><label><input id="new-required" type="checkbox"> Обязательное</label></div>
+        <button class="btn btn-primary" type="submit">Добавить поле</button>
+      </form>
+    </section>
+    <section class="panel" id="deleted" hidden>
+      <h2>Удалённые поля</h2>
+      <div id="deleted-list"></div>
+    </section>
+  </main>
+  <script type="module" src="js/client-fields.js"></script>
+</body>
+</html>

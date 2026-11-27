@@ -2,12 +2,14 @@ package ru.mehanikakomforta.finance;
 
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import ru.mehanikakomforta.CrmProperties;
 import ru.mehanikakomforta.clients.ClientEntity;
 import ru.mehanikakomforta.clients.ClientEventEntity;
 import ru.mehanikakomforta.clients.ClientEventRepository;
+import ru.mehanikakomforta.clients.ClientFields;
 import ru.mehanikakomforta.clients.ClientRepository;
 import ru.mehanikakomforta.leads.LeadEntity;
 import ru.mehanikakomforta.leads.LeadRepository;
@@ -22,6 +24,7 @@ import java.util.List;
 import java.util.Locale;
 
 @Component
+@Order(1)
 public class ContractLinks implements ApplicationRunner {
 
     private final ContractRepository contracts;
@@ -30,6 +33,7 @@ public class ContractLinks implements ApplicationRunner {
     private final ClientEventRepository events;
     private final LeadRepository leads;
     private final CrmProperties properties;
+    private final ClientFields cardFields;
 
     public ContractLinks(
             ContractRepository contracts,
@@ -37,7 +41,8 @@ public class ContractLinks implements ApplicationRunner {
             ClientRepository clients,
             ClientEventRepository events,
             LeadRepository leads,
-            CrmProperties properties
+            CrmProperties properties,
+            ClientFields cardFields
     ) {
         this.contracts = contracts;
         this.objects = objects;
@@ -45,6 +50,7 @@ public class ContractLinks implements ApplicationRunner {
         this.events = events;
         this.leads = leads;
         this.properties = properties;
+        this.cardFields = cardFields;
     }
 
     @Override
@@ -126,6 +132,12 @@ public class ContractLinks implements ApplicationRunner {
         if (created) {
             events.save(new ClientEventEntity(client.getId(), lead == null ? null : lead.getId(), Instant.now(), "director", "contract"));
         }
+        java.util.Map<String, String> copied = new java.util.LinkedHashMap<>();
+        copied.put("client.kpp", contract.getClientKpp());
+        copied.put("client.ogrn", contract.getClientOgrn());
+        copied.put("client.signatory", contract.getSignatory());
+        copied.put("object.address", contract.getObjectAddress());
+        cardFields.rememberContract(client.getId(), copied);
         return client.getId();
     }
 

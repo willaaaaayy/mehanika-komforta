@@ -29,17 +29,20 @@ public class ClientController {
     private final ClientEventRepository events;
     private final LeadRepository leads;
     private final ru.mehanikakomforta.finance.ContractLinks links;
+    private final ClientFields cardFields;
 
     public ClientController(
             ClientRepository clients,
             ClientEventRepository events,
             LeadRepository leads,
-            ru.mehanikakomforta.finance.ContractLinks links
+            ru.mehanikakomforta.finance.ContractLinks links,
+            ClientFields cardFields
     ) {
         this.clients = clients;
         this.events = events;
         this.leads = leads;
         this.links = links;
+        this.cardFields = cardFields;
     }
 
     @GetMapping("/api/clients")
@@ -100,6 +103,9 @@ public class ClientController {
         ClientEntity client = found.get();
         client.fill(body.type(), body.name(), body.phone(), body.email(), body.inn(), body.address(), null);
         client.status(body.status());
+        if (body.customFields() != null) {
+            cardFields.saveValues(client.getId(), body.customFields());
+        }
         events.save(new ClientEventEntity(client.getId(), client.getSourceLeadId(), Instant.now(), ClientAccess.actor(), "edit"));
         return ResponseEntity.ok(page(clients.save(client)));
     }
@@ -213,7 +219,8 @@ public class ClientController {
                 events.findByClientIdOrderByAtDesc(client.getId()).stream()
                         .map(event -> new HistoryLine(event.getAt().toString(), historyText(event.getAction())))
                         .toList(),
-                lead
+                lead,
+                cardFields.valuesOf(client.getId())
         );
     }
 
@@ -298,7 +305,8 @@ public class ClientController {
             String email,
             String inn,
             String address,
-            String status
+            String status,
+            java.util.Map<String, Object> customFields
     ) {
     }
 
@@ -343,7 +351,8 @@ public class ClientController {
             List<ru.mehanikakomforta.finance.ContractLinks.Card> contracts,
             List<ru.mehanikakomforta.finance.ContractLinks.Site> objects,
             List<HistoryLine> history,
-            LeadResponse lead
+            LeadResponse lead,
+            java.util.Map<String, Object> customFields
     ) {
     }
 

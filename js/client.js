@@ -104,27 +104,92 @@ async function loadPhotos() {
   });
 }
 
-function renderData() {
+function controlFor(field, value) {
+  const kind = field.fieldType || field.type;
+  if (kind === "checkbox") {
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = value === true || value === "true";
+    return input;
+  }
+  if (kind === "select" || kind === "multiselect") {
+    const box = document.createElement("div");
+    const options = Array.isArray(field.options) ? field.options : String(field.options || "").split(",");
+    options.map(function (item) { return String(item).trim(); }).filter(Boolean).forEach(function (option) {
+      const label = document.createElement("label");
+      const input = document.createElement("input");
+      input.type = kind === "multiselect" ? "checkbox" : "radio";
+      input.name = field.key;
+      input.value = option;
+      const selected = Array.isArray(value) ? value.indexOf(option) >= 0 : value === option;
+      input.checked = selected;
+      label.append(input, document.createTextNode(" " + option));
+      box.append(label);
+    });
+    return box;
+  }
+  const input = document.createElement("input");
+  if (kind === "date") input.type = "date";
+  else if (kind === "email") input.type = "email";
+  else if (kind === "phone") input.type = "tel";
+  else if (kind === "link") input.type = "url";
+  else if (kind === "file") input.type = "file";
+  else if (kind === "number" || kind === "money") input.inputMode = "decimal";
+  if (kind !== "file") input.value = value == null || value === "" ? (field.defaultValue || "") : value;
+  return input;
+}
+
+function readControl(field, node) {
+  const kind = field.fieldType || field.type;
+  if (kind === "checkbox") return node.checked;
+  if (kind === "multiselect" || kind === "select") {
+    const chosen = [...node.querySelectorAll("input:checked")].map(function (item) { return item.value; });
+    return kind === "select" ? (chosen[0] || "") : chosen;
+  }
+  if (kind === "file") return node.files && node.files[0] ? node.files[0] : null;
+  return node.value.trim();
+}
+
+async function renderData() {
   const box = document.getElementById("panel-data");
   box.replaceChildren();
+  const settings = document.createElement("p");
+  const settingsLink = document.createElement("a");
+  settingsLink.href = "client-fields.html?type=" + encodeURIComponent(client.type || "person");
+  settingsLink.textContent = "Настроить поля";
+  settings.append(settingsLink);
+  box.append(settings);
+  let layout = null;
+  const layoutResponse = await api("/api/client-layout?type=" + encodeURIComponent(client.type || "person"));
+  if (layoutResponse.ok) layout = await layoutResponse.json();
   const form = document.createElement("form");
-  const fields = [
-    ["name", "Имя", client.name],
-    ["phone", "Телефон", client.phone],
-    ["email", "Почта", client.email],
-    ["inn", "ИНН", client.inn],
-    ["address", "Адрес", client.address]
-  ];
   const inputs = {};
-  fields.forEach(function (item) {
+  const custom = client.customFields || {};
+  const defined = layout && Array.isArray(layout.fields) ? layout.fields.filter(function (field) {
+    return !field.hidden && !field.deleted;
+  }) : [
+    { key: "name", title: "Имя", fieldType: "text", system: true },
+    { key: "phone", title: "Телефон", fieldType: "phone", system: true },
+    { key: "email", title: "Почта", fieldType: "email" },
+    { key: "inn", title: "ИНН", fieldType: "text", system: true },
+    { key: "address", title: "Адрес", fieldType: "text" }
+  ];
+  defined.forEach(function (field) {
     const wrap = document.createElement("div");
     wrap.className = "field";
     const label = document.createElement("label");
-    label.textContent = item[1];
-    const input = document.createElement("input");
-    input.value = item[2] || "";
-    inputs[item[0]] = input;
-    wrap.append(label, input);
+    label.textContent = field.title || field.key;
+    const stored = Object.prototype.hasOwnProperty.call(client, field.key) && ["name", "phone", "email", "inn", "address"].indexOf(field.key) >= 0
+      ? client[field.key]
+      : custom[field.key];
+    const node = controlFor(field, stored);
+    inputs[field.key] = { field: field, node: node };
+    if (field.hint) {
+      const hint = document.createElement("p");
+      hint.className = "muted";
+      hint.textContent = field.hint;
+      wrap.append(label, node, hint);
+    } else wrap.append(label, node);
     form.append(wrap);
   });
   const type = document.createElement("select");
@@ -145,18 +210,28 @@ function renderData() {
   form.append(button);
   form.addEventListener("submit", async function (event) {
     event.preventDefault();
-    const body = {
-      name: inputs.name.value.trim(),
-      phone: inputs.phone.value.trim(),
-      email: inputs.email.value.trim(),
-      inn: inputs.inn.value.trim(),
-      address: inputs.address.value.trim(),
-      type: type.value
-    };
+    const body = { type: type.value, customFields: Object.assign({}, custom) };
+    const files = [];
+    Object.keys(inputs).forEach(function (key) {
+      const item = inputs[key];
+      const value = readControl(item.field, item.node);
+      if ((item.field.fieldType || item.field.type) === "file") {
+        if (value) files.push({ key: key, file: value });
+        return;
+      }
+      if (["name", "phone", "email", "inn", "address"].indexOf(key) >= 0) body[key] = value;
+      else body.customFields[key] = value;
+    });
     const response = await api("/api/clients/" + id, { method: "PATCH", body: JSON.stringify(body) });
     if (response.ok) {
       client = Object.assign(client, body);
-      document.getElementById("card-title").textContent = body.name || "Клиент";
+      for (const item of files) {
+        const formData = new FormData();
+        formData.append("key", item.key);
+        formData.append("file", item.file, item.file.name);
+        await api("/api/clients/" + id + "/files", { method: "POST", body: formData });
+      }
+      document.getElementById("card-title").textContent = body.name || client.name || "Клиент";
       toast("Сохранили.");
     } else {
       banner.hidden = false;
@@ -232,7 +307,7 @@ async function load() {
     document.getElementById("card-status").textContent = client.status || "";
     renderOverview();
     await loadPhotos();
-    renderData();
+    await renderData();
     const contracts = document.getElementById("panel-contracts");
     contracts.replaceChildren();
     const upload = document.createElement("button");
