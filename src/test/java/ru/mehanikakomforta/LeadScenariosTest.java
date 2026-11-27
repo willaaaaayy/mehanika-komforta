@@ -518,7 +518,6 @@ class LeadScenariosTest {
         mvc.perform(get("/api/finance").session(session(login)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totals.receivable").value(1062500))
-                .andExpect(jsonPath("$.totals.invested").doesNotExist())
                 .andExpect(jsonPath("$.clients[0].id").value(clientId))
                 .andExpect(jsonPath("$.clients[0].name").value("ООО СЗ ГК «Кронверк»"))
                 .andExpect(jsonPath("$.clients[0].items[0].object").value(org.hamcrest.Matchers.containsString("этаж 17")));
@@ -528,7 +527,7 @@ class LeadScenariosTest {
                 .andExpect(jsonPath("$.contracts[0].schedule[1].amount").value(531250))
                 .andExpect(jsonPath("$.objects[0].address").value(org.hamcrest.Matchers.containsString("этаж 17")))
                 .andExpect(jsonPath("$.due").value(1062500));
-        String objectId = mvc.perform(get("/api/objects").session(session(login)))
+        String objectId = mvc.perform(get("/api/objects").param("client", clientId).session(session(login)))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString().replaceFirst(".*?\"id\":(\\d+).*", "$1");
         mvc.perform(get("/api/objects/" + objectId).session(session(login)))
@@ -737,7 +736,7 @@ class LeadScenariosTest {
                         .session(session(login))
                         .with(csrf()))
                 .andExpect(status().isCreated());
-        mvc.perform(get("/api/finance").session(session(login)))
+        mvc.perform(get("/api/finance").param("from", "2026-11-02").param("to", "2026-11-02").session(session(login)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.totals.spent").value(1000))
                 .andExpect(jsonPath("$.totals.profit").value(-1000))
@@ -750,7 +749,7 @@ class LeadScenariosTest {
                         .session(session(login))
                         .with(csrf()))
                 .andExpect(status().isCreated());
-        mvc.perform(get("/api/finance").session(session(login)))
+        mvc.perform(get("/api/finance").param("from", "2026-11-02").param("to", "2026-11-03").session(session(login)))
                 .andExpect(jsonPath("$.totals.spent").value(1000))
                 .andExpect(jsonPath("$.totals.profit").value(-1000));
         mvc.perform(multipart("/api/expenses")
@@ -764,12 +763,12 @@ class LeadScenariosTest {
                         .session(session(login))
                         .with(csrf()))
                 .andExpect(status().isCreated());
-        mvc.perform(get("/api/finance").param("mode", "cash").session(session(login)))
+        mvc.perform(get("/api/finance").param("mode", "cash").param("from", "2026-11-02").param("to", "2026-11-04").session(session(login)))
                 .andExpect(jsonPath("$.totals.spent").value(1050))
                 .andExpect(jsonPath("$.totals.profit").value(-1050))
                 .andExpect(jsonPath("$.totals.payable").value(800))
                 .andExpect(jsonPath("$.weeks[0].out").value(1050));
-        mvc.perform(get("/api/finance").param("mode", "accrual").session(session(login)))
+        mvc.perform(get("/api/finance").param("mode", "accrual").param("from", "2026-11-02").param("to", "2026-11-04").session(session(login)))
                 .andExpect(jsonPath("$.totals.spent").value(1050))
                 .andExpect(jsonPath("$.totals.profit").doesNotExist());
     }

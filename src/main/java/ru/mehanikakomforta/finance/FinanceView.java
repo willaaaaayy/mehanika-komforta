@@ -43,7 +43,13 @@ record FinanceView(
     record NextPayment(BigDecimal amount, LocalDate date) {
     }
 
-    record Item(Long contractId, String number, String object, List<Step> schedule) {
+    record Item(Long contractId, String number, String object, List<Step> schedule, List<WorkLine> works) {
+    }
+
+    record WorkLine(String title, BigDecimal clientPrice, BigDecimal cost, BigDecimal margin, boolean teaching) {
+    }
+
+    record CostLine(String title, BigDecimal plan, BigDecimal fact, BigDecimal deviation, boolean over) {
     }
 
     record Step(

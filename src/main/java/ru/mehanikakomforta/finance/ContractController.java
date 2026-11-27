@@ -35,13 +35,25 @@ class ContractController {
     private final ScheduleRepository schedule;
     private final ContractLinks links;
     private final FinanceService finances;
+    private final InternalRates rates;
+    private final ru.mehanikakomforta.leads.LeadRepository leads;
     private final CrmProperties properties;
 
-    ContractController(ContractRepository contracts, ScheduleRepository schedule, ContractLinks links, FinanceService finances, CrmProperties properties) {
+    ContractController(
+            ContractRepository contracts,
+            ScheduleRepository schedule,
+            ContractLinks links,
+            FinanceService finances,
+            InternalRates rates,
+            ru.mehanikakomforta.leads.LeadRepository leads,
+            CrmProperties properties
+    ) {
         this.contracts = contracts;
         this.schedule = schedule;
         this.links = links;
         this.finances = finances;
+        this.rates = rates;
+        this.leads = leads;
         this.properties = properties;
     }
 
@@ -109,7 +121,13 @@ class ContractController {
                             late ? (int) (today.toEpochDay() - step.getDueOn().toEpochDay()) : null
                     ));
                 }
-                items.add(new FinanceView.Item(contract.getId(), contract.getNumber(), contract.getObjectAddress(), steps));
+                items.add(new FinanceView.Item(
+                        contract.getId(),
+                        contract.getNumber(),
+                        contract.getObjectAddress(),
+                        steps,
+                        workLines(contract)
+                ));
             }
             BigDecimal due = amount.subtract(paid);
             receivable = receivable.add(due.max(BigDecimal.ZERO));
@@ -269,6 +287,16 @@ class ContractController {
             return "client";
         }
         return null;
+    }
+
+    private List<FinanceView.WorkLine> workLines(ContractEntity contract) {
+        if (contract.getLeadId() == null) {
+            return List.of();
+        }
+        java.time.LocalDate asOf = contract.getSignedOn() == null ? java.time.LocalDate.of(2020, 1, 1) : contract.getSignedOn();
+        return leads.findById(contract.getLeadId())
+                .map(lead -> rates.lines(lead.getWorksJson(), lead.getGrade(), asOf))
+                .orElse(List.of());
     }
 
     private static boolean sameClient(ContractEntity item, String client) {

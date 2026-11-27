@@ -405,10 +405,13 @@ function scheduleLine(row) {
 }
 
 function worksLine(work) {
-  if (!work || (!hasNumber(work.clientPrice) && !hasNumber(work.cost))) return null;
+  if (!work || (!hasNumber(work.clientPrice) && !hasNumber(work.cost) && !hasNumber(work.margin))) return null;
   const row = document.createElement("p");
   row.className = "work-line";
-  row.textContent = (work.title || "Работа") + " · клиенту " + sumText(work.clientPrice) + " · себестоимость " + sumText(work.cost);
+  row.textContent = (work.teaching ? "Учебные ставки. " : "") + (work.title || "Работа")
+    + " · клиенту " + sumText(work.clientPrice)
+    + " · себестоимость " + sumText(work.cost)
+    + (hasNumber(work.margin) ? " · маржа " + sumText(work.margin) : "");
   return row;
 }
 

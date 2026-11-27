@@ -32,17 +32,23 @@ class ObjectController {
     private final ContractRepository contracts;
     private final ClientRepository clients;
     private final LeadPhotoRepository photos;
+    private final InternalRates rates;
+    private final ru.mehanikakomforta.leads.LeadRepository leads;
 
     ObjectController(
             WorkObjectRepository objects,
             ContractRepository contracts,
             ClientRepository clients,
-            LeadPhotoRepository photos
+            LeadPhotoRepository photos,
+            InternalRates rates,
+            ru.mehanikakomforta.leads.LeadRepository leads
     ) {
         this.objects = objects;
         this.contracts = contracts;
         this.clients = clients;
         this.photos = photos;
+        this.rates = rates;
+        this.leads = leads;
     }
 
     @GetMapping("/api/objects")
@@ -178,8 +184,56 @@ class ObjectController {
                 object.getStatus(),
                 due(rows),
                 photoLead(rows, object.getClientId()),
-                views
+                views,
+                costs(object, rows),
+                rates.threshold()
         );
+    }
+
+    private List<FinanceView.CostLine> costs(WorkObjectEntity object, List<ContractEntity> rows) {
+        java.time.LocalDate asOf = objectCreated(rows);
+        java.util.LinkedHashSet<String> workIds = new java.util.LinkedHashSet<>();
+        for (ContractEntity contract : rows) {
+            if (contract.getLeadId() == null) {
+                continue;
+            }
+            leads.findById(contract.getLeadId()).ifPresent(lead -> workIds.addAll(workIds(lead.getWorksJson())));
+        }
+        ClientEntity client = clients.findById(object.getClientId()).orElse(null);
+        if (client != null && client.getSourceLeadId() != null) {
+            leads.findById(client.getSourceLeadId()).ifPresent(lead -> workIds.addAll(workIds(lead.getWorksJson())));
+        }
+        return rates.costs(new ArrayList<>(workIds), asOf);
+    }
+
+    private static java.time.LocalDate objectCreated(List<ContractEntity> rows) {
+        java.time.LocalDate asOf = null;
+        for (ContractEntity contract : rows) {
+            if (contract.getSignedOn() == null) {
+                continue;
+            }
+            if (asOf == null || contract.getSignedOn().isBefore(asOf)) {
+                asOf = contract.getSignedOn();
+            }
+        }
+        return asOf == null ? java.time.LocalDate.of(2020, 1, 1) : asOf;
+    }
+
+    private static List<String> workIds(String worksJson) {
+        if (worksJson == null || worksJson.isBlank()) {
+            return List.of();
+        }
+        JsonNode node = tools.jackson.databind.json.JsonMapper.builder().build().readTree(worksJson);
+        if (!node.isArray()) {
+            return List.of();
+        }
+        List<String> ids = new ArrayList<>();
+        for (JsonNode item : node) {
+            if (!item.asString().isBlank()) {
+                ids.add(item.asString());
+            }
+        }
+        return ids;
     }
 
     private Long photoLead(List<ContractEntity> rows, Long clientId) {
@@ -250,7 +304,9 @@ class ObjectController {
             String status,
             BigDecimal due,
             Long leadId,
-            List<ContractView> contracts
+            List<ContractView> contracts,
+            List<FinanceView.CostLine> costs,
+            BigDecimal threshold
     ) {
     }
 

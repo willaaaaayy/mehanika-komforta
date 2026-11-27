@@ -17,7 +17,7 @@ function sumText(value) {
 }
 
 function showTab(name) {
-  ["overview", "contracts", "payments"].forEach(function (key) {
+  ["overview", "contracts", "payments", "costs"].forEach(function (key) {
     document.getElementById("panel-" + key).hidden = key !== name;
   });
   document.querySelectorAll("#tabs a").forEach(function (link) {
@@ -112,6 +112,29 @@ function render() {
     });
   });
   if (!any) payments.textContent = "Графика платежей нет.";
+  const costs = document.getElementById("panel-costs");
+  costs.replaceChildren();
+  const lines = object.costs || [];
+  if (object.threshold != null) {
+    const note = document.createElement("p");
+    note.className = "muted";
+    note.textContent = "Порог отклонения " + object.threshold + " %.";
+    costs.append(note);
+  }
+  if (!lines.length) {
+    const empty = document.createElement("p");
+    empty.textContent = "Себестоимости по объекту нет.";
+    costs.append(empty);
+  }
+  lines.forEach(function (line) {
+    const row = document.createElement("p");
+    if (line.over) row.className = "late";
+    row.textContent = (line.title || "Позиция")
+      + " · план " + (line.plan == null ? "—" : line.plan)
+      + " · факт " + (line.fact == null ? "—" : line.fact)
+      + " · отклонение " + (line.deviation == null ? "—" : line.deviation + " %");
+    costs.append(row);
+  });
 }
 
 async function loadLeadPhotos() {
