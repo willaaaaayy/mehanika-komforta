@@ -146,6 +146,18 @@ function render() {
       costs.append(row);
     });
   }
+  const materials = object.materials || [];
+  if (materials.length) {
+    const title = document.createElement("h3");
+    title.textContent = "Материалы";
+    costs.append(title);
+    materials.forEach(function (item) {
+      const row = document.createElement("p");
+      row.textContent = (item.title || "Позиция") + " · " + sumText(item.amount)
+        + (item.supplier ? " · " + item.supplier : "");
+      costs.append(row);
+    });
+  }
 }
 
 async function loadLeadPhotos() {

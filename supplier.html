@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#ffffff">
+  <title>Поставщик — Механика Комфорта</title>
+  <link rel="icon" href="logo.jpg" type="image/jpeg">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <a class="skip" href="#main">К содержанию</a>
+  <header class="bar">
+    <div class="brand">
+      <img src="logo.jpg" alt="" width="96" height="96">
+      <span>Механика Комфорта</span>
+    </div>
+    <nav aria-label="Разделы">
+      <a href="suppliers.html">Поставщики</a>
+      <a href="finance.html">Финансы</a>
+    </nav>
+    <button class="btn btn-ghost bar-end" type="button" id="logout">Выйти</button>
+  </header>
+  <main class="wrap" id="main">
+    <p class="banner" id="banner" role="alert" hidden></p>
+    <article id="card" hidden>
+      <header class="lead-bar">
+        <div>
+          <p class="kicker">Поставщик</p>
+          <h1 id="card-title">Поставщик</h1>
+          <p id="balance" class="num"></p>
+        </div>
+        <div class="page-actions">
+          <button class="btn" type="button" id="edit">Реквизиты</button>
+          <button class="btn" type="button" id="doc-open">Накладная или счёт</button>
+          <button class="btn btn-primary" type="button" id="pay-open">Оплатить</button>
+        </div>
+      </header>
+      <section class="panel" id="documents"></section>
+      <section class="panel">
+        <h2>Акт сверки</h2>
+        <div class="tools">
+          <div class="field"><label for="from">Дата с</label><input id="from" type="date"></div>
+          <div class="field"><label for="to">Дата по</label><input id="to" type="date"></div>
+        </div>
+        <a class="btn" id="statement" href="#">Скачать</a>
+      </section>
+    </article>
+  </main>
+  <dialog id="requisites">
+    <form class="dialog-body" id="requisites-form">
+      <h2>Реквизиты</h2>
+      <div class="field"><label for="name">Название</label><input id="name" required></div>
+      <div class="field"><label for="inn">ИНН</label><input id="inn"></div>
+      <div class="field"><label for="phone">Телефон</label><input id="phone" type="tel"></div>
+      <div class="field"><label for="address">Адрес</label><input id="address"></div>
+      <div class="field"><label for="contract">Договор</label><input id="contract"></div>
+      <div class="dialog-actions">
+        <button class="btn btn-primary" type="submit">Сохранить</button>
+        <button class="btn" type="button" id="requisites-close">Закрыть</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="document">
+    <form class="dialog-body" id="document-form">
+      <h2>Накладная или счёт</h2>
+      <div class="field">
+        <label for="doc-kind">Вид</label>
+        <select id="doc-kind">
+          <option value="delivery">Накладная</option>
+          <option value="invoice">Счёт</option>
+        </select>
+      </div>
+      <div class="field"><label for="doc-number">Номер</label><input id="doc-number"></div>
+      <div class="field"><label for="doc-date">Дата</label><input id="doc-date" type="date" required></div>
+      <div class="field"><label for="doc-file">Файл</label><input id="doc-file" type="file"></div>
+      <div id="lines"></div>
+      <button class="btn btn-text" type="button" id="add-line">Позиция</button>
+      <p class="note" id="doc-status" role="status" hidden></p>
+      <div class="dialog-actions">
+        <button class="btn btn-primary" type="submit">Сохранить</button>
+        <button class="btn" type="button" id="document-close">Закрыть</button>
+      </div>
+    </form>
+  </dialog>
+  <dialog id="pay">
+    <form class="dialog-body" id="pay-form">
+      <h2>Оплата</h2>
+      <div class="field"><label for="pay-amount">Сумма, ₽</label><input id="pay-amount" inputmode="decimal" required></div>
+      <div class="field"><label for="pay-date">Дата</label><input id="pay-date" type="date" required></div>
+      <p class="note" id="pay-status" role="status" hidden></p>
+      <div class="dialog-actions">
+        <button class="btn btn-primary" type="submit">Оплатить</button>
+        <button class="btn" type="button" id="pay-close">Закрыть</button>
+      </div>
+    </form>
+  </dialog>
+  <script type="module" src="js/supplier.js"></script>
+</body>
+</html>
